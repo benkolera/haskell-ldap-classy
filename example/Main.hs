@@ -158,7 +158,7 @@ main = printErr $ do
     void $ updateEntry (u & userMobile .~ (Just "0499333555"))
     uMayAfter <- getUser (Uid "bkolera")
     liftIO $ print (uMayAfter :: Maybe User)
-    -- Just (User {_userUid = Uid "bkolera", _userDn = Dn "cn=Ben Kolera,ou=iseek,ou=users,dc=iseek,dc=com,dc=au", _userUidNumber = UidNumber 1234, _userFirstName = "Ben", _userLastName = "Kolera", _userDisplayName = "Ben Kolera", _userEmail = "bkolera@email.com.au", _userMobile = Just "0499333666"})
+    -- Just (User {_userUid = Uid "bkolera", _userDn = Dn "cn=Ben Kolera,ou=iseek,ou=users,dc=iseek,dc=com,dc=au", _userUidNumber = UidNumber 1234, _userFirstName = "Ben", _userLastName = "Kolera", _userDisplayName = "Ben Kolera", _userEmail = "bkolera@email.com.au", _userMobile = Just "0499333555"})
   where
     runLdap' :: LdapConfig -> ExceptT ExampleLdapError (ReaderT LdapEnv IO) a -> ExceptT String IO a
     runLdap' conf =
