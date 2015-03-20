@@ -18,20 +18,17 @@ module LDAP.Classy
   , LdapEnv
   , HasLdapConfig(..)
   , HasLdapEnv(..)
-  , Ldap
-  , LdapEntry
-  , LdapScope
-  , LdapException
-  , LdapMod
   , search
   , searchFirst
-  , update
+  , updateEntry
+  , modify
   , bindLdap
   , runLdap
   , module LDAP
+  , module LDAP.Classy.Types
   ) where
 
-import BasePrelude hiding (first, try)
+import           BasePrelude               hiding (first, try)
 
 import           Control.Lens
 import           Control.Monad.Catch       (try)
@@ -43,32 +40,19 @@ import           Control.Monad.IO.Class    (MonadIO, liftIO)
 import           Control.Monad.Reader      (MonadReader, ReaderT, runReaderT)
 import           Data.Text                 (Text)
 import           Data.Text.Lens
-import           LDAP                      (LDAPEntry (..), LDAPMod (..),
+import           LDAP                      (LDAP, LDAPEntry (..),
+                                            LDAPException (..), LDAPMod (..),
                                             LDAPModOp (..), LDAPScope (..),
                                             SearchAttributes (..))
 import qualified LDAP                      as L
 import           LDAP.Classy.Decode        (AsLdapEntryDecodeError,
-                                            FromLdapAttribute (..),
                                             FromLdapEntry (..),
                                             LdapEntryDecodeError,
+                                            ToLdapEntry (..),
                                             _LdapEntryDecodeError)
 import           LDAP.Classy.Search        (LdapSearch, ldapSearchStr)
+import           LDAP.Classy.Types
 import           Safe                      (headMay)
-
-type Ldap          = L.LDAP
-type LdapEntry     = L.LDAPEntry
-type LdapScope     = L.LDAPScope
-type LdapException = L.LDAPException
-type LdapMod       = L.LDAPMod
-
-newtype Uid = Uid Text deriving (Show,IsString)
-makeWrapped ''Uid
-
-newtype UidNumber = UidNumber Int deriving (Show,Num)
-makeWrapped ''UidNumber
-
-newtype Dn = Dn Text deriving (Show,IsString)
-makeWrapped ''Dn
 
 --
 data LdapCredentials = LdapCredentials
@@ -80,14 +64,14 @@ makeClassy ''LdapCredentials
 data LdapConfig = LdapConfig
   { _ldapConfigHost        :: Text
   , _ldapConfigPort        :: Int
-  , _ldapConfigBaseDn      :: Maybe Text
+  , _ldapConfigBaseDn      :: Maybe Dn
   , _ldapConfigScope       :: LDAPScope
   , _ldapConfigCredentials :: Maybe LdapCredentials
   }
 makeClassy ''LdapConfig
 
 data LdapEnv = LdapEnv
-  { _ldapEnvContext :: Ldap
+  { _ldapEnvContext :: LDAP
   , _ldapEnvConfig  :: LdapConfig
   }
 makeClassy ''LdapEnv
@@ -96,9 +80,9 @@ instance HasLdapConfig LdapEnv where
   ldapConfig = ldapEnvConfig
 
 data LdapError =
-  ConnectException LdapException
+  ConnectException LDAPException
   | DecodeFailure LdapEntryDecodeError
-  | BindFailure LdapException
+  | BindFailure LDAPException
   deriving Show
 makeClassyPrisms ''LdapError
 
@@ -122,7 +106,7 @@ search :: ( CanLdap m c e , AsLdapError e, Applicative m, FromLdapEntry a )
 search q a = do
   dn <- view (ldapEnvConfig.ldapConfigBaseDn)
   s  <- view (ldapEnvConfig.ldapConfigScope)
-  es <- liftLdap $ \ l -> L.ldapSearch l (dn^?_Just.from packed) s (Just qs) a False
+  es <- liftLdap $ \ l -> L.ldapSearch l (dn^?_Just._Wrapped.from packed) s (Just qs) a False
   traverse fromLdapEntry es
   where
     qs = ldapSearchStr q
@@ -133,8 +117,14 @@ searchFirst :: ( CanLdap m c e , AsLdapError e, Applicative m, FromLdapEntry a )
   -> m (Maybe a)
 searchFirst q = fmap headMay . search q
 
-update :: (CanLdap m c e, AsLdapError e) => Dn -> [LdapMod] -> m ()
-update d m = liftLdap $ \ l -> L.ldapModify l (d^._Wrapped.from packed) m
+modify :: (CanLdap m c e, AsLdapError e) => String -> [LDAPMod] -> m ()
+modify dn mods = liftLdap $ \ l -> L.ldapModify l (traceShowId dn) (traceShowId mods)
+
+updateEntry :: (CanLdap m c e, AsLdapError e,ToLdapEntry a) => a -> m ()
+updateEntry a = modify (ledn lde) mods
+  where
+    lde  = toLdapEntry a
+    mods = L.list2ldm LdapModReplace (leattrs lde)
 
 bindLdap :: (CanLdap m c e, AsLdapError e) => Dn -> Text -> m ()
 bindLdap d p = catching _ConnectException doBind (throwing _BindFailure)
@@ -142,7 +132,7 @@ bindLdap d p = catching _ConnectException doBind (throwing _BindFailure)
     doBind = liftLdap $ \ c ->
       L.ldapSimpleBind c (d^._Wrapped.from packed) (p^.from packed)
 
-liftLdap :: (CanLdap m c e, AsLdapError e) => (Ldap -> IO a) -> m a
+liftLdap :: (CanLdap m c e, AsLdapError e) => (LDAP -> IO a) -> m a
 liftLdap f = view ldapEnvContext >>= tryLdap . f
 
 tryLdap :: (MonadError e m, MonadIO m, AsLdapError e) => IO a -> m a
@@ -173,9 +163,3 @@ runLdap m = do
     doLdap env m' = do
       e <- liftIO $ (runReaderT (runExceptT m') env)
       either throwError pure e
-
-instance FromLdapAttribute Uid where
-  fromLdapAttribute = fmap Uid . fromLdapAttribute
-
-instance FromLdapAttribute UidNumber where
-  fromLdapAttribute = fmap UidNumber . fromLdapAttribute

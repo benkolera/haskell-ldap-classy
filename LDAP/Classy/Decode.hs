@@ -29,7 +29,9 @@ import Data.List.NonEmpty        (NonEmpty (..))
 import qualified Data.List.NonEmpty        as NEL
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
+import Data.Text.Lens (packed)
 import LDAP                      as L
+import LDAP.Classy.Types
 
 data LdapEntryDecodeError
   = RequiredAttributeMissing LDAPEntry String
@@ -47,7 +49,14 @@ class FromLdapEntry a where
   fromLdapEntry :: (MonadError e m,AsLdapEntryDecodeError e,Applicative m) => L.LDAPEntry -> m a
 
 class ToLdapEntry a where
+  toLdapAttrs :: a -> [(String,[String])]
+  toLdapAttrs a = leattrs . toLdapEntry $ a
+  toLdapDn    :: a -> Dn
+  toLdapDn a = Dn . T.pack . ledn . toLdapEntry $ a
   toLdapEntry :: a -> LDAPEntry
+  toLdapEntry a = LDAPEntry (toLdapDn a ^._Wrapped.from packed) (toLdapAttrs a)
+
+  {-# MINIMAL toLdapAttrs, toLdapDn | toLdapEntry #-}
 
 attrMay
   :: (MonadError e m, AsLdapEntryDecodeError e,FromLdapAttribute a,Applicative m)
@@ -156,6 +165,12 @@ instance FromLdapEntry LDAPEntry where
 
 instance ToLdapEntry LDAPEntry where
   toLdapEntry = id
+
+instance FromLdapAttribute Uid where
+  fromLdapAttribute = fmap Uid . fromLdapAttribute
+
+instance FromLdapAttribute UidNumber where
+  fromLdapAttribute = fmap UidNumber . fromLdapAttribute
 
 readLdapAttribute :: (MonadError e m, Read a) => e -> String -> m a
 readLdapAttribute e = hoistError (const e) . readMay
