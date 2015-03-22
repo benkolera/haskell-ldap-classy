@@ -6,16 +6,19 @@
 {-# LANGUAGE TypeFamilies               #-}
 module LDAP.Classy.Types where
 
-import           BasePrelude
+import BasePrelude
 
-import           Control.Lens
-import           Data.Text    (Text)
+import Control.Lens
+import Data.Text    (Text)
 
 newtype Uid = Uid Text deriving (Show,IsString)
 makeWrapped ''Uid
 
 newtype UidNumber = UidNumber Int deriving (Show,Num)
 makeWrapped ''UidNumber
+
+newtype GidNumber = GidNumber Int deriving (Show,Num)
+makeWrapped ''GidNumber
 
 newtype Dn = Dn Text deriving (Show,IsString)
 makeWrapped ''Dn
