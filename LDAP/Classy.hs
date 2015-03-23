@@ -18,6 +18,7 @@ module LDAP.Classy
   , LdapEnv
   , HasLdapConfig(..)
   , HasLdapEnv(..)
+  , findByDn
   , search
   , searchWithScope
   , searchFirst
@@ -39,7 +40,7 @@ module LDAP.Classy
   , module LDAP.Classy.Types
   ) where
 
-import BasePrelude hiding (delete, first, insert, try)
+import           BasePrelude               hiding (delete, first, insert, try)
 
 import           Control.Lens
 import           Control.Monad.Catch       (try)
@@ -111,6 +112,18 @@ type CanLdap m c e =
   , AsLdapEntryDecodeError e
   , HasLdapEnv c
   )
+
+findByDn :: ( CanLdap m c e , AsLdapError e, Applicative m, FromLdapEntry a ) => Dn -> SearchAttributes -> m (Maybe a)
+findByDn dn a = do
+  es <- liftLdap $ \ l ->
+    L.ldapSearch
+    l
+    (Just (dn^._Wrapped.from packed))
+    LdapScopeBase
+    Nothing
+    a
+    False
+  traverse fromLdapEntry . headMay $ es
 
 searchWithScope
   :: ( CanLdap m c e , AsLdapError e, Applicative m, FromLdapEntry a )
