@@ -19,7 +19,7 @@ module Main where
    of the use cases that I'm writing the library for...
 -}
 
-import           BasePrelude               hiding (first, try)
+import BasePrelude hiding (first, try)
 
 import           Control.Lens
 import           Control.Monad.Error.Hoist ((<!?>), (<?>))
@@ -50,8 +50,9 @@ import           LDAP.Classy.Decode        (AsLdapEntryDecodeError (..),
                                             FromLdapEntry (..),
                                             ToLdapEntry (..), attrList, attrMay,
                                             attrSingle)
-import           LDAP.Classy.Search        (isPosixAccount, isPosixGroup, (&&.),
-                                            (==.), (||.))
+import           LDAP.Classy.Search        (LdapSearch, isPosixAccount,
+                                            isPosixGroup, (&&.), (*~*=.), (==.),
+                                            (||.))
 import           Options.Applicative
 
 
@@ -144,6 +145,8 @@ accountAttrs = LDAPAttrList
   , "memberUid"
   , "dn"
   , "uniqueMember"
+  , "iseekCustomerNumber"
+  , "iseekSalesforceID"
   ]
 
 userAttrs :: SearchAttributes
@@ -158,6 +161,14 @@ userAttrs = LDAPAttrList
   , "mobile"
   , "cn"
   ]
+
+searchAccounts :: (CanExampleLdap m c e, Applicative m , Functor m) => NonEmpty AccountSearchTerm -> m [Account]
+searchAccounts sts = search (foldSearchTerms f sts) accountAttrs
+  where
+    f (AccountSearchName  n)          = ("iseekAlias" *~*=. n^.from packed ||. "cn" ==. n^.from packed)
+    f (AccountSearchCustomerNumber n) = "iseekCustomerNumber" *~*=. n^._Wrapped.to show
+    f (AccountSearchCrmId i)          = "iseekSalesforceID" *~*=. i^._Wrapped.from packed
+    f (AccountSearchUsername u)       = "memberUid" *~*=. u^._Wrapped.from packed
 
 updateAccount :: (CanExampleLdap m c e, Applicative m, Functor m) => Account -> m ()
 updateAccount = modifyEntry
@@ -203,15 +214,17 @@ getUser uid = searchFirst
    userAttrs
 
 searchUsers :: (CanExampleLdap m c e, Applicative m , Functor m) => NonEmpty UserSearchTerm -> m [User]
-searchUsers sts = search
-  (foldl (&&.) (NEL.head searchExprs) $ (NEL.tail searchExprs))
-  userAttrs
+searchUsers sts = search (foldSearchTerms searchTerm sts) userAttrs
   where
-    searchExprs = fmap searchTerm sts
-    searchTerm (UserSearchUsername uid) = "uid"       ==. uid^._Wrapped.from packed
-    searchTerm (UserSearchFirstName fn) = "givenName" ==. fn^.from packed
-    searchTerm (UserSearchLastName  sn) = "sn"        ==. sn^.from packed
-    searchTerm (UserSearchEmail      e) = "mail"      ==. e^.from packed
+    searchTerm (UserSearchUsername uid) = "uid"       *~*=. uid^._Wrapped.from packed
+    searchTerm (UserSearchFirstName fn) = "givenName" *~*=. fn^.from packed
+    searchTerm (UserSearchLastName  sn) = "sn"        *~*=. sn^.from packed
+    searchTerm (UserSearchEmail      e) = "mail"      *~*=. e^.from packed
+
+foldSearchTerms :: (a -> LdapSearch) -> NonEmpty a -> LdapSearch
+foldSearchTerms f as = foldl (&&.) (NEL.head exprs) (NEL.tail exprs)
+  where
+    exprs = fmap f as
 
 updateUser :: (CanExampleLdap m c e, Applicative m, Functor m,AsExampleLdapError e) => User -> m ()
 updateUser u = do
@@ -269,7 +282,7 @@ instance FromLdapEntry Account where
     <*> attrSingle "cn" e
     <*> attrSingle "iseekAlias" e
     <*> (attrSingle "iseekCustomerNumber" e <&> CustomerNumber)
-    <*> (attrSingle "iseekSalesforceId" e <&> AccountCrmId)
+    <*> (attrSingle "iseekSalesforceID" e <&> AccountCrmId)
     <*> (attrList "memberUid" e <&> fmap Uid)
     <*> (attrList "uniqueMember" e <&> fmap Dn)
 

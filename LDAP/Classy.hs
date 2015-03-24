@@ -40,7 +40,7 @@ module LDAP.Classy
   , module LDAP.Classy.Types
   ) where
 
-import           BasePrelude               hiding (delete, first, insert, try)
+import BasePrelude hiding (delete, first, insert, try)
 
 import           Control.Lens
 import           Control.Monad.Catch       (try)
@@ -136,7 +136,7 @@ searchWithScope q a dn s = do
   es <- liftLdap $ \ l -> L.ldapSearch l (dn^?_Just._Wrapped.from packed) s (Just qs) a False
   traverse fromLdapEntry es
   where
-    qs = ldapSearchStr q
+    qs = traceShowId $ ldapSearchStr q
 
 -- TODO: I don't like that the searchAttrs passed in are separate from
 --       the FromLdapEntry instance meaning you can change one and
