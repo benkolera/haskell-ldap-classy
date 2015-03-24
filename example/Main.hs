@@ -91,6 +91,9 @@ makeWrapped ''MemberUids
 newtype NextUidNumber = NextUidNumber UidNumber deriving (Show,Num)
 makeWrapped ''NextUidNumber
 
+newtype NextGidNumber = NextGidNumber GidNumber deriving (Show,Num)
+makeWrapped ''NextGidNumber
+
 data Account' a = Account
   { _accountGid            :: a
   , _accountDn             :: Dn
@@ -158,6 +161,34 @@ userAttrs = LDAPAttrList
   , "mobile"
   , "cn"
   ]
+
+getUserByGidNumber :: (CanExampleLdap m c e, Applicative m , Functor m)  => GidNumber -> m (Maybe User)
+getUserByGidNumber gidNum = searchFirst
+   (isPosixGroup &&. "gidNumber" ==. (gidNum^._Wrapped.to show))
+   accountAttrs
+
+getNextGidNumber :: (CanExampleLdap m c e, Applicative m , Functor m,AsExampleLdapError e) => m NextGidNumber
+getNextGidNumber = do
+  mGidMay <- getMaxGidNumber
+  mGid    <- mGidMay <?> (_NoMaxGid # ())
+  nGid    <- nextFreeGid (mGid + 1)
+  modify "cn=MaxGroupGid,ou=groups,dc=iseek,dc=com,dc=au" [LDAPMod LdapModReplace "gidNumber" [nGid^._Wrapped._Wrapped.to show]]
+  pure nGid
+  where
+    nextFreeGid mGid = do
+      uMay <- getUserByGidNumber (mGid^._Wrapped)
+      maybe (pure mGid) (const (nextFreeGid (mGid+1))) uMay
+
+getMaxGidNumber :: (CanExampleLdap m c e, Applicative m, Functor m) => m (Maybe NextGidNumber)
+getMaxGidNumber = searchFirst
+  ("objectClass" ==. "iseekGidNext" &&. "cn" ==. "MaxGroupGid")
+  (LDAPAttrList ["gidNumber"])
+
+insertAccount :: (CanExampleLdap m c e, Applicative m, Functor m, AsExampleLdapError e) => NewAccount -> m ()
+insertAccount na = do
+  gid <- view _Wrapped <$> getNextGidNumber
+  let acct  = na & accountGid .~ gid
+  insertEntry acct
 
 updateAccount :: (CanExampleLdap m c e, Applicative m, Functor m) => Account -> m ()
 updateAccount = modifyEntry
@@ -317,6 +348,9 @@ instance FromLdapEntry MemberUids where
 
 instance FromLdapEntry NextUidNumber where
   fromLdapEntry e = NextUidNumber <$> attrSingle "uidNumber" e
+
+instance FromLdapEntry NextGidNumber where
+  fromLdapEntry e = NextGidNumber <$> attrSingle "gidNumber" e
 
 main :: IO ()
 main = printErr $ do

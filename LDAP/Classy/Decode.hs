@@ -172,5 +172,8 @@ instance FromLdapAttribute Uid where
 instance FromLdapAttribute UidNumber where
   fromLdapAttribute = fmap UidNumber . fromLdapAttribute
 
+instance FromLdapAttribute GidNumber where
+  fromLdapAttribute = fmap GidNumber . fromLdapAttribute
+
 readLdapAttribute :: (MonadError e m, Read a) => e -> String -> m a
 readLdapAttribute e = hoistError (const e) . readMay
