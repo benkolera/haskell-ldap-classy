@@ -36,11 +36,12 @@ module LDAP.Classy
   , bindLdap
   , runLdap
   , runLdapSimple
+  , connectLdap
   , module LDAP
   , module LDAP.Classy.Types
   ) where
 
-import BasePrelude hiding (delete, first, insert, try)
+import           BasePrelude               hiding (delete, first, insert, try)
 
 import           Control.Lens
 import           Control.Monad.Catch       (try)
@@ -231,6 +232,15 @@ liftLdap f = view ldapEnvContext >>= tryLdap . f
 tryLdap :: (MonadError e m, MonadIO m, AsLdapError e) => IO a -> m a
 tryLdap m = (liftIO . try $ m) <%!?> (_ConnectException #)
 
+connectLdap :: (Applicative m, MonadError e m, MonadIO m, AsLdapError e, AsLdapEntryDecodeError e) => LdapConfig -> m LdapEnv
+connectLdap c = do
+  let h = c ^.ldapConfigHost.from packed
+  let p = c ^.ldapConfigPort.to fromIntegral
+  ctx <- tryLdap $ L.ldapInit h p
+  let env = LdapEnv ctx c
+  doLdap env bindRootDn
+  pure env
+
 runLdap
   :: ( MonadReader c m
     , MonadError e m
@@ -244,15 +254,13 @@ runLdap
   -> m a
 runLdap m = do
   c <- view ldapConfig
-  let h = c ^.ldapConfigHost.from packed
-  let p = c ^.ldapConfigPort.to fromIntegral
-  ctx <- tryLdap $ L.ldapInit h p
-  let env = LdapEnv ctx c
-  doLdap env $ bindRootDn >> m
-  where
-    doLdap env m' = do
-      e <- liftIO $ (runReaderT (runExceptT m') env)
-      either throwError pure e
+  env <- connectLdap c
+  doLdap env m
+
+doLdap :: (MonadError a m, MonadIO m, Applicative m) => r -> ExceptT a (ReaderT r IO) b -> m b
+doLdap env m' = do
+  e <- liftIO $ (runReaderT (runExceptT m') env)
+  either throwError pure e
 
 runLdapSimple
   :: ExceptT LdapError (ReaderT LdapEnv IO) a

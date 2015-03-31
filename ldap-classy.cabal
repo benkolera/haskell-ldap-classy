@@ -2,7 +2,7 @@
 -- documentation, see http://haskell.org/cabal/users-guide/
 
 name:                ldap-classy
-version:             0.1.0.0
+version:             0.2.0.0
 synopsis:            An opinionated typeclassy layer on top of the LDAP library.
 -- description:
 homepage:            https://github.com/benkolera/haskell-ldap-classy
@@ -15,6 +15,10 @@ category:            Database
 build-type:          Simple
 -- extra-source-files:
 cabal-version:       >=1.10
+
+Flag build-example
+  Description: Build the example executable or not
+  Default: False
 
 library
   exposed-modules:
@@ -31,7 +35,7 @@ library
     , bytestring        == 0.10.*
     , exceptions        >= 0.6 && < 0.9
     , hoist-error       == 0.1.*
-    , lens              == 4.7.*
+    , lens              == 4.8.*
     , LDAP              == 0.6.*
     , mtl               == 2.2.*
     , passwords         == 0.1.*
@@ -46,13 +50,17 @@ library
 executable example
   main-is: Main.hs
   hs-source-dirs: example
+  if flag(build-example)
+    buildable: True
+  else
+    buildable: False
   build-depends:
       base >=4.7 && <4.8
     , ldap-classy
     , base-prelude
     , bifunctors            == 4.2.*
     , hoist-error           == 0.1.*
-    , lens                  == 4.7.*
+    , lens                  == 4.8.*
     , LDAP                  == 0.6.*
     , mtl                   == 2.2.*
     , optparse-applicative
