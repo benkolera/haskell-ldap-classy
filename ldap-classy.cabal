@@ -27,6 +27,7 @@ library
     , LDAP.Classy.Decode
     , LDAP.Classy.SSha
     , LDAP.Classy.Types
+    , LDAP.Classy.Dn
   build-depends:
       base >=4.7 && <4.8
     , base-prelude

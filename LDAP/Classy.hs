@@ -10,7 +10,6 @@
 module LDAP.Classy
   ( Uid(..)
   , UidNumber(..)
-  , Dn(..)
   , LdapConfig(..)
   , LdapError
   , AsLdapError(..)
@@ -39,9 +38,10 @@ module LDAP.Classy
   , connectLdap
   , module LDAP
   , module LDAP.Classy.Types
+  , module LDAP.Classy.Dn
   ) where
 
-import           BasePrelude               hiding (delete, first, insert, try)
+import BasePrelude hiding (delete, first, insert, try)
 
 import           Control.Lens
 import           Control.Monad.Catch       (try)
@@ -61,15 +61,15 @@ import           LDAP                      (LDAP, LDAPEntry (..),
                                             LDAPModOp (..), LDAPScope (..),
                                             SearchAttributes (..))
 import qualified LDAP                      as L
-import           LDAP.Classy.Decode        (AsLdapEntryDecodeError,
-                                            FromLdapEntry (..),
-                                            LdapEntryDecodeError,
-                                            ToLdapEntry (..),
-                                            _LdapEntryDecodeError)
-import           LDAP.Classy.Search        (LdapSearch, ldapSearchStr)
-import           LDAP.Classy.SSha          (toSSha)
-import           LDAP.Classy.Types
-import           Safe                      (headMay)
+
+import LDAP.Classy.Decode (AsLdapEntryDecodeError, FromLdapEntry (..),
+                           LdapEntryDecodeError, ToLdapEntry (..),
+                           _LdapEntryDecodeError)
+import LDAP.Classy.Dn
+import LDAP.Classy.Search (LdapSearch, ldapSearchStr)
+import LDAP.Classy.SSha   (toSSha)
+import LDAP.Classy.Types
+import Safe               (headMay)
 
 data LdapCredentials = LdapCredentials
   { _ldapCredentialsDn       :: Dn
@@ -119,7 +119,7 @@ findByDn dn a = do
   es <- liftLdap $ \ l ->
     L.ldapSearch
     l
-    (Just (dn^._Wrapped.from packed))
+    (Just (dn^.dnText.from packed))
     LdapScopeBase
     Nothing
     a
@@ -134,10 +134,10 @@ searchWithScope
   -> LDAPScope
   -> m [a]
 searchWithScope q a dn s = do
-  es <- liftLdap $ \ l -> L.ldapSearch l (dn^?_Just._Wrapped.from packed) s (Just qs) a False
+  es <- liftLdap $ \ l -> L.ldapSearch l (dn^?_Just.dnText.from packed) s (Just qs) a False
   traverse fromLdapEntry es
   where
-    qs = traceShowId $ ldapSearchStr q
+    qs = ldapSearchStr q
 
 -- TODO: I don't like that the searchAttrs passed in are separate from
 --       the FromLdapEntry instance meaning you can change one and
@@ -166,7 +166,7 @@ searchFirst :: ( CanLdap m c e , AsLdapError e, Applicative m, FromLdapEntry a )
 searchFirst q = fmap headMay . search q
 
 modify :: (CanLdap m c e, AsLdapError e) => Dn -> [LDAPMod] -> m ()
-modify dn mods = liftLdap $ \ l -> L.ldapModify l (dn^._Wrapped.from packed) mods
+modify dn mods = liftLdap $ \ l -> L.ldapModify l (dn^.dnText.from packed) mods
 
 modifyEntry :: (CanLdap m c e, AsLdapError e,ToLdapEntry a) => a -> m ()
 modifyEntry a =
@@ -180,7 +180,7 @@ insertEntry :: (CanLdap m c e, AsLdapError e,ToLdapEntry a) => a -> m ()
 insertEntry = insert . toLdapEntry
 
 delete :: (CanLdap m c e, AsLdapError e) => Dn -> m ()
-delete dn = liftLdap $ \ l -> L.ldapDelete l (dn^._Wrapped.from packed)
+delete dn = liftLdap $ \ l -> L.ldapDelete l (dn^.dnText.from packed)
 
 deleteEntry :: (CanLdap m c e, AsLdapError e,ToLdapEntry a) => a -> m ()
 deleteEntry = delete . toLdapDn . toLdapEntry
@@ -218,7 +218,7 @@ bindLdap :: (CanLdap m c e, AsLdapError e) => Dn -> Text -> m ()
 bindLdap d p = catching _ConnectException doBind (throwing _BindFailure)
   where
     doBind = liftLdap $ \ c ->
-      L.ldapSimpleBind c (d^._Wrapped.from packed) (p^.from packed)
+      L.ldapSimpleBind c (d^.dnText.from packed) (p^.from packed)
 
 bindRootDn :: (CanLdap m c e, AsLdapError e,Applicative m) => m ()
 bindRootDn =
