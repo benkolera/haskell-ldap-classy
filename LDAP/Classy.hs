@@ -12,7 +12,7 @@ module LDAP.Classy
   , UidNumber(..)
   , Dn(..)
   , LdapConfig(..)
-  , LdapError
+  , LdapError(..)
   , AsLdapError(..)
   , LdapCredentials(..)
   , LdapEnv
