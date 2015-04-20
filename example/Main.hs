@@ -19,7 +19,7 @@ module Main where
    of the use cases that I'm writing the library for...
 -}
 
-import           BasePrelude               hiding (first, try)
+import BasePrelude hiding (first, try, (&), (<>))
 
 import           Control.Lens
 import           Control.Monad.Error.Hoist ((<!?>), (<?>))
@@ -30,8 +30,9 @@ import           Control.Monad.TM          ((.>>=.))
 import           Control.Monad.Trans       (liftIO)
 import           Control.Monad.Trans       (MonadIO)
 import           Data.Bifunctor            (first)
-import           Data.List.NonEmpty        (NonEmpty)
+import           Data.List.NonEmpty        (NonEmpty (..))
 import qualified Data.List.NonEmpty        as NEL
+import           Data.Semigroup            ((<>))
 import           Data.Text                 (Text, pack)
 import qualified Data.Text                 as T
 import           Data.Text.Lens
@@ -42,10 +43,12 @@ import           LDAP.Classy               (AsLdapError (..), Dn (..),
                                             LdapCredentials (..), LdapEnv,
                                             LdapError, SearchAttributes (..),
                                             Uid (..), UidNumber (..),
-                                            checkPassword, deleteEntry,
-                                            findByDn, insertEntry, ledn, modify,
-                                            modifyEntry, resetPassword, runLdap,
-                                            search, searchFirst, setPassword)
+                                            checkPassword, cn, dc, deleteEntry,
+                                            dnFromEntry, dnFromText, dnText,
+                                            findByDn, insertEntry, modify,
+                                            modifyEntry, ou, resetPassword,
+                                            runLdap, search, searchFirst,
+                                            setPassword)
 import           LDAP.Classy.Decode        (AsLdapEntryDecodeError (..),
                                             FromLdapEntry (..),
                                             ToLdapEntry (..), attrList, attrMay,
@@ -53,7 +56,8 @@ import           LDAP.Classy.Decode        (AsLdapEntryDecodeError (..),
 import           LDAP.Classy.Search        (LdapSearch, isPosixAccount,
                                             isPosixGroup, (&&.), (*~*=.), (==.),
                                             (||.))
-import           Options.Applicative
+import           Options.Applicative       hiding ((<>))
+import qualified Options.Applicative       as O
 
 
 data ExampleLdapError
@@ -165,6 +169,9 @@ userAttrs = LDAPAttrList
   , "cn"
   ]
 
+iseekDn :: Dn
+iseekDn = Dn $ dc "iseek" :| [dc "com", dc "au"]
+
 getUserByGidNumber :: (CanExampleLdap m c e, Applicative m , Functor m)  => GidNumber -> m (Maybe User)
 getUserByGidNumber gidNum = searchFirst
    (isPosixGroup &&. "gidNumber" ==. (gidNum^._Wrapped.to show))
@@ -175,7 +182,8 @@ getNextGidNumber = do
   mGidMay <- getMaxGidNumber
   mGid    <- mGidMay <?> (_NoMaxGid # ())
   nGid    <- nextFreeGid (mGid + 1)
-  modify "cn=MaxGroupGid,ou=groups,dc=iseek,dc=com,dc=au" [LDAPMod LdapModReplace "gidNumber" [nGid^._Wrapped._Wrapped.to show]]
+  let dn  = Dn (cn "MaxGroupGid" :| [ou "groups"]) <> iseekDn
+  modify dn [LDAPMod LdapModReplace "gidNumber" [nGid^._Wrapped._Wrapped.to show]]
   pure nGid
   where
     nextFreeGid mGid = do
@@ -226,8 +234,8 @@ removeUserFromAccount u a = updateAccount $ a
 
 accountsOfUser :: (CanExampleLdap m c e, Applicative m) => User -> m [Account]
 accountsOfUser u = search
-  (   "memberUid" ==. u^.userUid._Wrapped.from packed
-  ||. "uniqueMember" ==. u^.userDn._Wrapped.from packed
+  (   "memberUid"   ==. u^.userUid._Wrapped.from packed
+  ||. "uniqueMember" ==. u^.userDn.dnText.from packed
   )
   accountAttrs
 
@@ -294,7 +302,8 @@ getNextUidNumber = do
   mUidMay <- getMaxUidNumber
   mUid    <- mUidMay <?> (_NoMaxUid # ())
   nUid    <- nextFreeUid (mUid + 1)
-  modify "cn=MaxCustomerUid,ou=users,dc=iseek,dc=com,dc=au" [LDAPMod LdapModReplace "uidNumber" [nUid^._Wrapped._Wrapped.to show]]
+  let dn  = Dn (cn "MaxCustomerUid" :| [ou "users"]) <> iseekDn
+  modify dn [LDAPMod LdapModReplace "uidNumber" [nUid^._Wrapped._Wrapped.to show]]
   pure nUid
   where
     nextFreeUid mUid = do
@@ -309,13 +318,13 @@ getMaxUidNumber =  searchFirst
 instance FromLdapEntry Account where
   fromLdapEntry e = Account
     <$> (attrSingle "gidNumber" e <&> GidNumber)
-    <*> pure (e ^.to ledn.packed.from _Wrapped)
+    <*> pure (dnFromEntry e)
     <*> attrSingle "cn" e
     <*> attrSingle "iseekAlias" e
     <*> (attrSingle "iseekCustomerNumber" e <&> CustomerNumber)
     <*> (attrSingle "iseekSalesforceID" e <&> AccountCrmId)
     <*> (attrList "memberUid" e <&> fmap Uid)
-    <*> (attrList "uniqueMember" e <&> fmap Dn)
+    <*> (attrList "uniqueMember" e)
 
 instance ToLdapEntry Account where
   toLdapDn      = view accountDn
@@ -326,13 +335,13 @@ instance ToLdapEntry Account where
     , ("iseekCustomerNumber" ,[a^.accountCustomerNumber._Wrapped.to show])
     , ("iseekSalesforceId"   ,[a^.accountCustomerNumber._Wrapped.from packed])
     , ("memberUid"           , a^..accountMemberUids.traverse._Wrapped.from packed)
-    , ("uniqueMember"        , a^..accountUniqueMembers.traverse._Wrapped.from packed)
+    , ("uniqueMember"        , a^..accountUniqueMembers.traverse.dnText.from packed)
     ]
 
 instance FromLdapEntry User where
   fromLdapEntry e = User
     <$> (attrSingle "uid" e <&> Uid)
-    <*> pure (e ^.to ledn.packed.from _Wrapped)
+    <*> pure (dnFromEntry e)
     <*> (attrSingle "gidNumber" e <&> GidNumber)
     <*> (attrSingle "uidNumber" e <&> UidNumber)
     <*> attrSingle "givenName" e
@@ -370,7 +379,7 @@ main = printErr $ do
   LdapOpts h p d s uMay pMay <- liftIO $ execParser opts
   let conf = LdapConfig h p d s (LdapCredentials <$> uMay <*> pMay)
   let gid  = GidNumber 11121
-  let dn   = Dn "uid=bkolera2,ou=customers,ou=users,dc=iseek,dc=com,dc=au"
+  let dn   = Dn (("uid","bkolera2") :| [ou "customers",ou "users"]) <> iseekDn
   let newU = User (Uid "bkolera2") dn gid () "Ben" "Kolera" "Ben Kolera" "ben.kolera@email.com" (Just "0400123456")
   runLdap' conf $ do
     getAccountByGid gid >>= liftIO . print
@@ -404,48 +413,48 @@ main = printErr $ do
 data LdapOpts = LdapOpts Text Int (Maybe Dn) LDAPScope (Maybe Dn) (Maybe Text) deriving Show
 
 opts :: ParserInfo LdapOpts
-opts = info (helper <*> ldapOpts) ( fullDesc <> progDesc "Sample LDAP Class App")
+opts = info (helper <*> ldapOpts) ( fullDesc O.<> progDesc "Sample LDAP Class App")
 
 ldapOpts :: Parser LdapOpts
 ldapOpts = LdapOpts
   <$> textOption
     ( long     "host"
-    <> metavar "HOSTNAME"
-    <> help    "LDAP server hostname to connect to"
-    <> value   "localhost"
-    <> showDefault
+    O.<> metavar "HOSTNAME"
+    O.<> help    "LDAP server hostname to connect to"
+    O.<> value   "localhost"
+    O.<> showDefault
     )
   <*> option auto
     ( long     "port"
-    <> metavar "PORT"
-    <> value   3389
-    <> help    "Port on the LDAP server to connect to"
+    O.<> metavar "PORT"
+    O.<> value   3389
+    O.<> help    "Port on the LDAP server to connect to"
     )
   <*> option dnReader
     ( long    "baseDn"
-    <> metavar "DN"
-    <> value   (Just . Dn $ "dc=iseek,dc=com,dc=au")
-    <> help    "Base DN to search from"
+    O.<> metavar "DN"
+    O.<> value   (Just . Dn $ dc "iseek" :| [dc "com",dc "au"])
+    O.<> help    "Base DN to search from"
     )
   <*> option (eitherReader scopeFromString)
     ( long     "scope"
-    <> metavar "SEARCH_SCOPE"
-    <> value   LdapScopeSubtree
-    <> help    "Either Default,Base,OneLevel or Subtree"
-    <> showDefaultWith showScope )
+    O.<> metavar "SEARCH_SCOPE"
+    O.<> value   LdapScopeSubtree
+    O.<> help    "Either Default,Base,OneLevel or Subtree"
+    O.<> showDefaultWith showScope )
   <*> option dnReader
     ( long    "rootDn"
-    <> metavar "DN"
-    <> value   Nothing
-    <> help    "Optional root DN to bind with"
-    <> showDefault
+    O.<> metavar "DN"
+    O.<> value   Nothing
+    O.<> help    "Optional root DN to bind with"
+    O.<> showDefault
     )
   <*> textOptionMay
     ( long     "password"
-    <> metavar "PASSWORD"
-    <> help    "Password to bind with"
-    <> value   Nothing
-    <> showDefault
+    O.<> metavar "PASSWORD"
+    O.<> help    "Password to bind with"
+    O.<> value   Nothing
+    O.<> showDefault
     )
 
 textOption :: Mod OptionFields Text -> Parser Text
@@ -472,4 +481,4 @@ showScope LdapScopeSubtree     = "SubTree"
 showScope (UnknownLDAPScope l) = "Level_" <> show l
 
 dnReader :: ReadM (Maybe Dn)
-dnReader = fmap Dn <$> textOptionMayReader
+dnReader = textOptionMayReader <&> (>>= dnFromText)

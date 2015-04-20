@@ -31,7 +31,9 @@ import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
 import Data.Text.Lens (packed)
 import LDAP                      as L
+
 import LDAP.Classy.Types
+import LDAP.Classy.Dn
 
 data LdapEntryDecodeError
   = RequiredAttributeMissing LDAPEntry String
@@ -51,10 +53,10 @@ class FromLdapEntry a where
 class ToLdapEntry a where
   toLdapAttrs :: a -> [(String,[String])]
   toLdapAttrs a = leattrs . toLdapEntry $ a
-  toLdapDn    :: a -> Dn
-  toLdapDn a = Dn . T.pack . ledn . toLdapEntry $ a
+  toLdapDn :: a -> Dn
+  toLdapDn = dnFromEntry . toLdapEntry
   toLdapEntry :: a -> LDAPEntry
-  toLdapEntry a = LDAPEntry (toLdapDn a ^._Wrapped.from packed) (toLdapAttrs a)
+  toLdapEntry a = LDAPEntry (toLdapDn a ^.dnText.from packed) (toLdapAttrs a)
 
   {-# MINIMAL toLdapAttrs, toLdapDn | toLdapEntry #-}
 
@@ -165,6 +167,15 @@ instance FromLdapEntry LDAPEntry where
 
 instance ToLdapEntry LDAPEntry where
   toLdapEntry = id
+
+instance ToLdapAttribute Dn where
+  toLdapAttribute = T.unpack . dnToText
+
+instance FromLdapAttribute Dn where
+  fromLdapAttribute =
+    maybe (Left "Invalid DN") Right
+    . dnFromText
+    . T.pack
 
 instance FromLdapAttribute Uid where
   fromLdapAttribute = fmap Uid . fromLdapAttribute
