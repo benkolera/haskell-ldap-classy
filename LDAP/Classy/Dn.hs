@@ -31,8 +31,7 @@ dnText :: Getter Dn Text
 dnText = to dnToText
 
 isParentOf :: Dn -> Dn -> Bool
-isParentOf (Dn p) (Dn c) =
-  pl < cl && NEL.drop (pl - cl) p == NEL.toList c
+isParentOf (Dn p) (Dn c) = pl < cl && NEL.drop (cl - pl) c == NEL.toList p
   where
     pl = NEL.length p
     cl = NEL.length c
