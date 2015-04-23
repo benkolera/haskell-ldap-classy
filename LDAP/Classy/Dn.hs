@@ -3,7 +3,7 @@
 {-# LANGUAGE TupleSections     #-}
 module LDAP.Classy.Dn where
 
-import BasePrelude hiding ((<>))
+import           BasePrelude        hiding ((<>))
 
 import           Control.Lens       (Getter, Prism', prism', to)
 import           Data.List.NonEmpty (NonEmpty, nonEmpty)
@@ -29,6 +29,16 @@ dnCons p (Dn nel) = Dn (NEL.cons p nel)
 
 dnText :: Getter Dn Text
 dnText = to dnToText
+
+isParentOf :: Dn -> Dn -> Bool
+isParentOf (Dn p) (Dn c) =
+  pl > cl && NEL.drop (pl - cl) p == NEL.toList c
+  where
+    pl = NEL.length p
+    cl = NEL.length c
+
+isChildOf :: Dn -> Dn -> Bool
+isChildOf c p = c /= p && (isParentOf p c)
 
 -- We're assuming that the LDAP server is going to return a valid DN
 dnFromEntry :: LDAPEntry -> Dn

@@ -41,7 +41,7 @@ module LDAP.Classy
   , module LDAP.Classy.Dn
   ) where
 
-import BasePrelude hiding (delete, first, insert, try)
+import           BasePrelude               hiding (delete, first, insert, try)
 
 import           Control.Lens
 import           Control.Monad.Catch       (try)
@@ -62,14 +62,16 @@ import           LDAP                      (LDAP, LDAPEntry (..),
                                             SearchAttributes (..))
 import qualified LDAP                      as L
 
-import LDAP.Classy.Decode (AsLdapEntryDecodeError, FromLdapEntry (..),
-                           LdapEntryDecodeError, ToLdapEntry (..),
-                           _LdapEntryDecodeError)
-import LDAP.Classy.Dn
-import LDAP.Classy.Search (LdapSearch, ldapSearchStr)
-import LDAP.Classy.SSha   (toSSha)
-import LDAP.Classy.Types
-import Safe               (headMay)
+import           LDAP.Classy.Decode        (AsLdapEntryDecodeError,
+                                            FromLdapEntry (..),
+                                            LdapEntryDecodeError,
+                                            ToLdapEntry (..),
+                                            _LdapEntryDecodeError)
+import           LDAP.Classy.Dn
+import           LDAP.Classy.Search        (LdapSearch, ldapSearchStr)
+import           LDAP.Classy.SSha          (toSSha)
+import           LDAP.Classy.Types
+import           Safe                      (headMay)
 
 data LdapCredentials = LdapCredentials
   { _ldapCredentialsDn       :: Dn
@@ -174,7 +176,10 @@ modifyEntry a =
 
 insert :: (CanLdap m c e, AsLdapError e) => LDAPEntry -> m ()
 insert le = liftLdap $ \ l ->
-  L.ldapAdd l (ledn le) . L.list2ldm LdapModAdd . leattrs $ le
+  L.ldapAdd l (ledn le)
+  . L.list2ldm LdapModAdd
+  . filter (not . null . snd)
+  . leattrs $ le
 
 insertEntry :: (CanLdap m c e, AsLdapError e,ToLdapEntry a) => a -> m ()
 insertEntry = insert . toLdapEntry
