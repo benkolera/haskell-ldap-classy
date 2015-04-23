@@ -32,7 +32,7 @@ dnText = to dnToText
 
 isParentOf :: Dn -> Dn -> Bool
 isParentOf (Dn p) (Dn c) =
-  pl > cl && NEL.drop (pl - cl) p == NEL.toList c
+  pl < cl && NEL.drop (pl - cl) p == NEL.toList c
   where
     pl = NEL.length p
     cl = NEL.length c
