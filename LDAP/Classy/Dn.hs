@@ -18,31 +18,80 @@ import           Data.Text            (Text)
 import qualified Data.Text            as T
 import           LDAP                 (LDAPEntry (..))
 
+data AttrType
+  = LocalityName
+  | CommonName
+  | StateOrProvinceName
+  | OrganizationName
+  | OrganizationalUnitName
+  | CountryName
+  | StreetAddress
+  | DomainComponent
+  | UserId
+  | OtherAttrType Text
+  | OidAttrType Integer
+  deriving (Eq)
+
+instance Show AttrType where
+  show LocalityName           = "L"
+  show CommonName             = "CN"
+  show StateOrProvinceName    = "ST"
+  show OrganizationName       = "O"
+  show OrganizationalUnitName = "OU"
+  show CountryName            = "C"
+  show StreetAddress          = "STREET"
+  show DomainComponent        = "DC"
+  show UserId                 = "UID"
+  show (OtherAttrType t)      = T.unpack t
+  show (OidAttrType i)        = show i
+
 newtype RelativeDn = RelativeDn
-  { unRelativeDn :: NonEmpty (Text,Text)
+  { unRelativeDn :: NonEmpty (AttrType,Text)
   } deriving (Eq,Show)
 
+-- BUG: Note that our derived equality here doesn't work in all cases
+-- because we at least need to treat the relative DNs as sets rather
+-- than have the ordering affect equality. There is something in an
+-- RFC about this that I'll have to read later.
 newtype Dn = Dn { unDn :: NonEmpty RelativeDn } deriving (Eq)
 
-uid :: Text -> (Text,Text)
-uid = ("uid",)
+uid :: Text -> (AttrType,Text)
+uid = (UserId,)
 
-cn :: Text -> (Text,Text)
-cn = ("cn",)
+cn :: Text -> (AttrType,Text)
+cn = (CommonName,)
 
-ou :: Text -> (Text,Text)
-ou = ("ou",)
+ou :: Text -> (AttrType,Text)
+ou = (OrganizationalUnitName,)
 
-dc :: Text -> (Text,Text)
-dc = ("dc",)
+dc :: Text -> (AttrType,Text)
+dc = (DomainComponent,)
+
+l :: Text -> (AttrType,Text)
+l = (LocalityName,)
+
+st :: Text -> (AttrType,Text)
+st = (StateOrProvinceName,)
+
+o :: Text -> (AttrType,Text)
+o = (OrganizationName,)
+
+c :: Text -> (AttrType,Text)
+c = (CountryName,)
+
+street :: Text -> (AttrType,Text)
+street = (StreetAddress,)
+
+oid :: Integer -> Text -> (AttrType,Text)
+oid o = (OidAttrType o,)
 
 dnCons :: RelativeDn -> Dn -> Dn
 dnCons p (Dn nel) = Dn (NEL.cons p nel)
 
-rDnSingle :: (Text,Text) -> RelativeDn
+rDnSingle :: (AttrType,Text) -> RelativeDn
 rDnSingle = RelativeDn . (:| [])
 
-rDnCons :: (Text,Text) -> RelativeDn -> RelativeDn
+rDnCons :: (AttrType,Text) -> RelativeDn -> RelativeDn
 rDnCons kv (RelativeDn nel) = RelativeDn (NEL.cons kv nel)
 
 dnText :: Getter Dn Text
@@ -80,8 +129,11 @@ relativeDnToText :: RelativeDn -> Text
 relativeDnToText =
   T.intercalate "+"
   . toList
-  . fmap (\ (k,v) -> k <> "=" <> v)
+  . fmap (\ (k,v) -> attrTypeToText k <> "=" <> v)
   . unRelativeDn
+
+attrTypeToText :: AttrType -> Text
+attrTypeToText = T.pack . show
 
 dnFromText :: Text -> Maybe Dn
 dnFromText = either (const Nothing) Just . dnFromTextEither
@@ -105,13 +157,13 @@ relativeDistinguishedName = RelativeDn . NEL.fromList
    <$> sepBy1 attributeTypeAndValue plus
 
 -- attributeTypeAndValue = attributeType EQUALS attributeValue
-attributeTypeAndValue :: Parser (Text,Text)
+attributeTypeAndValue :: Parser (AttrType,Text)
 attributeTypeAndValue = (,)
-   <$> (attributeType <* equals)
-   <*> attributeValue
+   <$> (attributeType <* optionalSpace <* equals <* optionalSpace)
+   <*> (attributeValue <* optionalSpace)
 
 -- attributeType = descr / numericoid
-attributeType :: Parser Text
+attributeType :: Parser AttrType
 attributeType = descr <|> numericOid
 
 -- attributeValue = string / hexstring
@@ -122,17 +174,31 @@ attributeValue = dnString <|> hexString
 -- keystring = leadkeychar *keychar
 -- leadkeychar = ALPHA
 -- keychar = ALPHA / DIGIT / HYPHEN
-descr :: Parser Text
-descr = (T.cons)
-  <$> alpha
-  <*> (T.pack <$> many (alpha <|> digit <|> hyphen))
+descr :: Parser AttrType
+descr = do
+  t <- T.cons
+    <$> alpha
+    <*> (T.pack <$> many (alpha <|> digit <|> hyphen))
+  pure $ case T.toUpper t of
+    "L"      -> LocalityName
+    "CN"     -> CommonName
+    "ST"     -> StateOrProvinceName
+    "O"      -> OrganizationName
+    "OU"     -> OrganizationalUnitName
+    "C"      -> CountryName
+    "STREET" -> StreetAddress
+    "DC"     -> DomainComponent
+    "UID"    -> UserId
+    _        -> OtherAttrType t
+
 
 -- numericoid = number 1*( DOT number )
 -- number  = DIGIT / ( LDIGIT 1*DIGIT )
-numericOid :: Parser Text
-numericOid =
-  (T.singleton <$> digit)
-  <|> (T.cons <$> lDigit <*> (T.pack <$> many1 digit))
+numericOid :: Parser AttrType
+numericOid = OidAttrType . read <$>
+  (   ((:)   <$> lDigit <*> many1 digit)
+  <|> ((:[]) <$> digit)
+  )
 
 -- Simplifying this (probably incorrectly) based on the fact that we've
 -- already gotten to a utf8 decoded Text anyway.
@@ -143,14 +209,19 @@ dnString :: Parser Text
 dnString = fmap T.concat . many1 $ (T.singleton <$> strChar) <|> pair
 
 strChar :: Parser Char
-strChar = satisfy (notInClass ",#= +;<>\x00")
+strChar = satisfy (notInClass ",#=+;<>\\\x00")
+
+escapedSpace :: Parser Char
+escapedSpace = esc *> space
 
 -- pair = ESC ( ESC / special / hexpair )
 pair :: Parser Text
 pair = esc *>
   (   (T.singleton <$> esc)
   <|> (T.singleton <$> special)
-  <|> hexPair
+-- Our datastructure can't handle the hex pairs well nor do I have a
+-- use for it. Lets omit unless it is needed later.
+--  <|> hexPair
   )
 
 singletonParser :: Parser Char -> Parser Text
@@ -163,6 +234,9 @@ special = escaped <|> space <|> sharp <|> equals
 -- escaped = DQUOTE / PLUS / COMMA / SEMI / LANGLE / RANGLE
 escaped :: Parser Char
 escaped = dQuote <|> plus <|> comma <|> semiColon <|> lAngle <|> rAngle
+
+optionalSpace :: Parser ()
+optionalSpace = void $ many space
 
 -- hexstring = SHARP 1*hexpair
 hexString :: Parser Text
@@ -195,7 +269,7 @@ dQuote :: Parser Char
 dQuote = char '"'
 
 sharp :: Parser Char
-sharp = char '='
+sharp = char '#'
 
 space :: Parser Char
 space = char ' '
