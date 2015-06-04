@@ -76,10 +76,10 @@ innerValuePartChar =
   <|> (DnValueSpecial <$> innerSpace)
 
 innerValueText :: Parser DnValuePart
-innerValueText = DnValueText . T.pack <$> many nonSpecialChar
+innerValueText = DnValueText . T.pack <$> many innerValueStrChar
 
-nonSpecialChar :: Parser Char
-nonSpecialChar = notInClassP invalidStrCharSet
+innerValueStrChar :: Parser Char
+innerValueStrChar = innerSpace <|> notInClassP (invalidStrCharSet <> " ")
 
 specialChar :: Parser Char
 specialChar = inClassP invalidStrCharSet
@@ -180,8 +180,7 @@ invalidStrCharSet :: [Char]
 invalidStrCharSet = ",#=+;<>\\\x00"
 
 strChar :: Parser Char
-strChar =
-  satisfy (notInClass invalidStrCharSet)
+strChar = satisfy (notInClass invalidStrCharSet)
 
 escapedSpace :: Parser Char
 escapedSpace = esc *> space

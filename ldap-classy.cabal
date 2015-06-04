@@ -32,7 +32,7 @@ library
       LDAP.Classy.Dn.Internal
     , LDAP.Classy.Dn.Types
   build-depends:
-      base >=4.7 && <4.8
+      base >=4.7 && <4.9
     , base-prelude
     , attoparsec        == 0.13.*
     , base64-bytestring == 1.0.*
@@ -60,7 +60,7 @@ executable example
   else
     buildable: False
   build-depends:
-      base >=4.7 && <4.8
+      base >=4.7 && <4.9
     , ldap-classy
     , base-prelude
     , bifunctors            == 4.2.*

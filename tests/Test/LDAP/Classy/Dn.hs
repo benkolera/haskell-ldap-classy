@@ -83,7 +83,7 @@ dnFromTextCrayCray :: Assertion
 dnFromTextCrayCray = dnFromTextEither crayCrayDnText @?= (Right crayCrayDn)
 
 dnToTextCrayCray :: Assertion
-dnToTextCrayCray = dnToText crayCrayDn @?= crayCrayDnText
+dnToTextCrayCray = dnToText crayCrayDn @?= "UID=benkolera+CN=Ben Kolera\\ ,1337=foo,DC=benkolera,DC=com"
 
 parserTest :: (Eq a, Show a) => Parser a -> Text -> Either String a -> Assertion
 parserTest p t expected = eitherResult (feed (parse (p <* endOfInput) t) "") @?= expected
