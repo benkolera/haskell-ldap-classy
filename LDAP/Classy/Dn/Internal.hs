@@ -58,7 +58,7 @@ dnValueParts = do
   ls <- option Nothing (Just . DnValueSpecial <$> space)
   ps <- innerValueParts
   endOfInput
-  pure (toList ls <> traceShowId ps)
+  pure (toList ls <> ps)
 
 innerValueParts :: Parser [DnValuePart]
 innerValueParts = hlpr []
