@@ -10,7 +10,7 @@ module LDAP.Classy.Dn where
 import           BasePrelude          hiding ((<>))
 
 import           Control.Lens         (Getter, Prism', prism', to)
-import           Data.Attoparsec.Text (Parser,maybeResult,eitherResult,parse,sepBy1,char,many1,option,inClass,satisfy,notInClass,endOfInput,feed,manyTill,skipMany,peekChar)
+import           Data.Attoparsec.Text (Parser,maybeResult,eitherResult,parse,sepBy1,char,many1,option,inClass,satisfy,notInClass,endOfInput,feed,manyTill,skipMany,peekChar,sepBy)
 import           Data.List.NonEmpty   (NonEmpty((:|)), nonEmpty)
 import qualified Data.List.NonEmpty   as NEL
 import           Data.Semigroup       (Semigroup (..))
@@ -53,7 +53,7 @@ newtype RelativeDn = RelativeDn
 -- because we at least need to treat the relative DNs as sets rather
 -- than have the ordering affect equality. There is something in an
 -- RFC about this that I'll have to read later.
-newtype Dn = Dn { unDn :: NonEmpty RelativeDn } deriving (Eq)
+newtype Dn = Dn { unDn :: [RelativeDn] } deriving (Eq)
 
 uid :: Text -> (AttrType,Text)
 uid = (UserId,)
@@ -86,7 +86,7 @@ oid :: Integer -> Text -> (AttrType,Text)
 oid o = (OidAttrType o,)
 
 dnCons :: RelativeDn -> Dn -> Dn
-dnCons p (Dn nel) = Dn (NEL.cons p nel)
+dnCons p (Dn nel) = Dn (p : nel)
 
 rDnSingle :: (AttrType,Text) -> RelativeDn
 rDnSingle = RelativeDn . (:| [])
@@ -98,10 +98,10 @@ dnText :: Getter Dn Text
 dnText = to dnToText
 
 isParentOf :: Dn -> Dn -> Bool
-isParentOf (Dn p) (Dn c) = pl < cl && NEL.drop (cl - pl) c == NEL.toList p
+isParentOf (Dn p) (Dn c) = pl < cl && drop (cl - pl) c == p
   where
-    pl = NEL.length p
-    cl = NEL.length c
+    pl = length p
+    cl = length c
 
 isChildOf :: Dn -> Dn -> Bool
 isChildOf c p = c /= p && (isParentOf p c)
@@ -145,8 +145,8 @@ dnFromTextEither = eitherResult . flip feed "" . parse distinguishedName
 --  [ relativeDistinguishedName
 --  * ( COMMA relativeDistinguishedName ) ]
 distinguishedName :: Parser Dn
-distinguishedName = Dn . NEL.fromList
-  <$> (sepBy1 relativeDistinguishedName comma <* endOfInput)
+distinguishedName = Dn
+  <$> (sepBy relativeDistinguishedName comma <* endOfInput)
 
 -- relativeDistinguishedName = attributeTypeAndValue
 -- *( PLUS attributeTypeAndValue )

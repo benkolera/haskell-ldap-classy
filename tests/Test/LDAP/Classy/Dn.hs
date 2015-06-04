@@ -46,9 +46,10 @@ dnFromTextNull =
 dnFromTextOk :: Assertion
 dnFromTextOk = dnFromTextEither "uid=benkolera,dc=benkolera,dc=com" @?= expected
   where
-    expected  = Right . Dn $ rDnSingle (uid "benkolera") :|
-      [ rDnSingle (dc "benkolera")
-      , rDnSingle (dc "com")
+    expected  = Right . Dn $
+      [ rDnSingle $ uid "benkolera"
+      , rDnSingle $ dc "benkolera"
+      , rDnSingle $ dc "com"
       ]
 
 dnFromTextCrayCray :: Assertion
@@ -56,11 +57,11 @@ dnFromTextCrayCray =
   dnFromTextEither "uid=benkolera + cn=  Ben Kolera\\ ,1337=foo,dc=benkolera,dc=com" @?= expected
   where
     expected  = Right . Dn $
-      RelativeDn ( uid "benkolera" :| [cn "Ben Kolera "]) :|
-        [ rDnSingle $ oid 1337 "foo"
-        , rDnSingle $ dc "benkolera"
-        , rDnSingle $ dc "com"
-        ]
+      [ RelativeDn ( uid "benkolera" :| [cn "Ben Kolera "])
+      , rDnSingle $ oid 1337 "foo"
+      , rDnSingle $ dc "benkolera"
+      , rDnSingle $ dc "com"
+      ]
 
 
 parserTest :: (Eq a, Show a) => Parser a -> Text -> Either String a -> Assertion
@@ -154,8 +155,9 @@ parseDistinguishedNameOk :: Assertion
 parseDistinguishedNameOk = parserTest
   distinguishedName
   "uid=benkolera,dc=benkolera,dc=com"
-  (Right . Dn $ (rDnSingle $ uid "benkolera") :|
-    [ rDnSingle $ dc "benkolera"
+  (Right . Dn $
+    [ rDnSingle $ uid "benkolera"
+    , rDnSingle $ dc "benkolera"
     , rDnSingle $ dc "com"
     ])
 
