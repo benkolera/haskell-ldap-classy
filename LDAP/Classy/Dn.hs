@@ -1,40 +1,101 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TupleSections     #-}
-module LDAP.Classy.Dn where
+{-# OPTIONS_GHC -fno-warn-orphans #-}
+module LDAP.Classy.Dn
+  ( module LDAP.Classy.Dn.Types
+  -- Lenses and Prisms
+  , dnText
+  , _DnText
+  -- Other DN functions
+  , isParentOf
+  , dnToText
+  -- Dn Construction combinators
+  , dnCons
+  , rDnCons
+  , rDnSingle
+  , dnFromText
+  , dnFromTextEither
+  , dnFromEntry
+  -- Attr Type Smart Constructors
+  , uid
+  , cn
+  , ou
+  , dc
+  , l
+  , st
+  , o
+  , c
+  , street
+  , oid
+  , otherAttrType
+  ) where
 
-import           BasePrelude        hiding ((<>))
+import           BasePrelude             hiding ((<>))
 
-import           Control.Lens       (Getter, Prism', prism', to)
-import           Data.List.NonEmpty (NonEmpty, nonEmpty)
-import qualified Data.List.NonEmpty as NEL
-import           Data.Semigroup     (Semigroup (..))
-import           Data.Text          (Text)
-import qualified Data.Text          as T
-import           LDAP               (LDAPEntry (..))
+import           Control.Lens            (Getter, Prism', prism', to)
+import           Data.Attoparsec.Text    (Parser, char, eitherResult,
+                                          endOfInput, feed, inClass, many1,
+                                          manyTill, maybeResult, notInClass,
+                                          option, parse, peekChar, satisfy,
+                                          sepBy, sepBy1, skipMany)
+import           Data.List.NonEmpty      (NonEmpty ((:|)), nonEmpty)
+import qualified Data.List.NonEmpty      as NEL
+import           Data.Semigroup          ((<>))
+import           Data.Text               (Text)
+import qualified Data.Text               as T
+import           LDAP                    (LDAPEntry (..))
 
-newtype Dn = Dn { unDn :: NonEmpty (Text,Text) } deriving (Eq)
+import           LDAP.Classy.Dn.Internal
+import           LDAP.Classy.Dn.Types
 
-cn :: Text -> (Text,Text)
-cn = ("cn",)
+uid :: Text -> (AttrType,Text)
+uid = (UserId,)
 
-ou :: Text -> (Text,Text)
-ou = ("ou",)
+cn :: Text -> (AttrType,Text)
+cn = (CommonName,)
 
-dc :: Text -> (Text,Text)
-dc = ("dc",)
+ou :: Text -> (AttrType,Text)
+ou = (OrganizationalUnitName,)
 
-dnCons :: (Text,Text) -> Dn -> Dn
-dnCons p (Dn nel) = Dn (NEL.cons p nel)
+dc :: Text -> (AttrType,Text)
+dc = (DomainComponent,)
 
-dnText :: Getter Dn Text
-dnText = to dnToText
+l :: Text -> (AttrType,Text)
+l = (LocalityName,)
+
+st :: Text -> (AttrType,Text)
+st = (StateOrProvinceName,)
+
+o :: Text -> (AttrType,Text)
+o = (OrganizationName,)
+
+c :: Text -> (AttrType,Text)
+c = (CountryName,)
+
+street :: Text -> (AttrType,Text)
+street = (StreetAddress,)
+
+oid :: Integer -> Text -> (AttrType,Text)
+oid o = (OidAttrType o,)
+
+otherAttrType :: Text -> Text -> Maybe AttrType
+otherAttrType _ _ = Nothing
+
+dnCons :: RelativeDn -> Dn -> Dn
+dnCons p (Dn nel) = Dn (p : nel)
+
+rDnSingle :: (AttrType,Text) -> RelativeDn
+rDnSingle = RelativeDn . (:| [])
+
+rDnCons :: (AttrType,Text) -> RelativeDn -> RelativeDn
+rDnCons kv (RelativeDn nel) = RelativeDn (NEL.cons kv nel)
 
 isParentOf :: Dn -> Dn -> Bool
-isParentOf (Dn p) (Dn c) = pl < cl && NEL.drop (cl - pl) c == NEL.toList p
+isParentOf (Dn p) (Dn c) = pl < cl && drop (cl - pl) c == p
   where
-    pl = NEL.length p
-    cl = NEL.length c
+    pl = length p
+    cl = length c
 
 isChildOf :: Dn -> Dn -> Bool
 isChildOf c p = c /= p && (isParentOf p c)
@@ -47,26 +108,26 @@ dnFromEntry (LDAPEntry dnStr _) =
   . T.pack
   $ dnStr
 
-_DnFromText :: Prism' Text Dn
-_DnFromText = prism' dnToText dnFromText
+dnText :: Getter Dn Text
+dnText = to dnToText
 
--- TODO: This probably needs to do something with escaping stuff.
+_DnText :: Prism' Text Dn
+_DnText = prism' dnToText dnFromText
+
 dnToText :: Dn -> Text
 dnToText =
   T.intercalate ","
-  . toList
-  . fmap (\ (k,v) -> k <> "=" <> v)
+  . fmap relativeDnToText
   . unDn
 
 dnFromText :: Text -> Maybe Dn
-dnFromText = fmap Dn . (nonEmpty =<<) . traverse parseDn . T.splitOn ","
-  where
-    parseDn t = case (T.splitOn "=" t) of
-      [k,v] -> Just (k,v)
-      _     -> Nothing
+dnFromText = either (const Nothing) Just . dnFromTextEither
+
+dnFromTextEither :: Text -> Either String Dn
+dnFromTextEither = eitherResult . flip feed "" . parse distinguishedName
+
+instance Show RelativeDn where
+  show = T.unpack . relativeDnToText
 
 instance Show Dn where
   show = T.unpack . dnToText
-
-instance Semigroup Dn where
-  (Dn nel1) <> (Dn nel2) = Dn (nel1 <> nel2)

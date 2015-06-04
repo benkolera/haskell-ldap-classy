@@ -2,7 +2,7 @@
 -- documentation, see http://haskell.org/cabal/users-guide/
 
 name:                ldap-classy
-version:             0.3.2.2
+version:             0.4.0.0
 synopsis:            An opinionated typeclassy layer on top of the LDAP library.
 -- description:
 homepage:            https://github.com/benkolera/haskell-ldap-classy
@@ -28,9 +28,13 @@ library
     , LDAP.Classy.SSha
     , LDAP.Classy.Types
     , LDAP.Classy.Dn
+  other-modules:
+      LDAP.Classy.Dn.Internal
+    , LDAP.Classy.Dn.Types
   build-depends:
-      base >=4.7 && <4.8
+      base >=4.7 && <4.9
     , base-prelude
+    , attoparsec        == 0.13.*
     , base64-bytestring == 1.0.*
     , bifunctors        == 4.2.*
     , bytestring        == 0.10.*
@@ -56,7 +60,7 @@ executable example
   else
     buildable: False
   build-depends:
-      base >=4.7 && <4.8
+      base >=4.7 && <4.9
     , ldap-classy
     , base-prelude
     , bifunctors            == 4.2.*
@@ -69,3 +73,30 @@ executable example
     , text                  == 1.2.*
     , UtilityTM             == 0.0.*
   default-language:    Haskell2010
+
+test-suite tasty
+  default-language: Haskell2010
+  type: exitcode-stdio-1.0
+  hs-source-dirs: tests, .
+  main-is: Tasty.hs
+  build-depends:
+      base        >= 4     && < 5
+    , tasty       >= 0.10
+    , tasty-hunit >= 0.9.2
+    , base-prelude
+    , attoparsec        == 0.13.*
+    , base64-bytestring == 1.0.*
+    , bifunctors        == 4.2.*
+    , bytestring        == 0.10.*
+    , exceptions        >= 0.6 && < 0.9
+    , hoist-error       == 0.1.*
+    , lens              == 4.8.*
+    , LDAP              == 0.6.*
+    , mtl               == 2.2.*
+    , passwords         == 0.1.*
+    , random            == 1.1.*
+    , safe              == 0.3.*
+    , semigroups        == 0.16.*
+    , SHA               == 1.6.*
+    , text              == 1.2.*
+    , transformers      == 0.4.*
