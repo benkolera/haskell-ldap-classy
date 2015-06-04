@@ -4,10 +4,10 @@ module Test.LDAP.Classy.Dn (dnTests) where
 import Test.Tasty (TestTree,testGroup)
 import Test.Tasty.HUnit (Assertion,testCase,(@?=))
 
-import Control.Applicative ((<*))
+import Control.Applicative ((<*),(*>),(<|>))
 import Data.Semigroup ((<>))
 import Data.Foldable (traverse_)
-import Data.Attoparsec.Text (feed,parse,Parser,eitherResult,endOfInput)
+import Data.Attoparsec.Text (feed,parse,Parser,eitherResult,endOfInput,option)
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.List.NonEmpty (NonEmpty((:|)))
@@ -21,19 +21,21 @@ dnTests = testGroup "dn"
     , testCase "craycray"      dnFromTextCrayCray
     ]
   , testGroup "parsers"
-    [ testCase "parsePairOk"                      parsePairOk
-    , testCase "dnStringOk"                       parseDnStringOk
-    , testCase "dnStringSpacesOk"                 parseDnStringSpacesOk
-    , testCase "attributeValueOk"                 parseAttributeValueOk
-    , testCase "attributeTypeOk"                  parseAttributeTypeOk
-    , testCase "attributeTypeAndValueOid"         parseAttributeTypeAndValueOid
-    , testCase "attributeTypeAndValueOther"       parseAttributeTypeAndValueOther
-    , testCase "attributeTypeAndValueOk"          parseAttributeTypeAndValueOk
-    , testCase "attributeTypeAndValueSpaces"      parseAttributeTypeAndValueSpaces
-    , testCase "parseNumericOid"                  parseNumericOid
-    , testCase "relativeDistinguishedNameOk"      parseRelativeDistinguishedNameOk
-    , testCase "relativeDistinguishedNameMultiOk" parseRelativeDistinguishedNameMultiOk
-    , testCase "distinguishedNameOk"              parseDistinguishedNameOk
+    [ testCase "parsePairOk"                          parsePairOk
+    , testCase "dnStringOk"                           parseDnStringOk
+    , testCase "dnStringSpacesOk"                     parseDnStringSpacesOk
+    , testCase "attributeValueOk"                     parseAttributeValueOk
+    , testCase "attributeTypeOk"                      parseAttributeTypeOk
+    , testCase "attributeTypeAndValueOid"             parseAttributeTypeAndValueOid
+    , testCase "attributeTypeAndValueOther"           parseAttributeTypeAndValueOther
+    , testCase "attributeTypeAndValueOk"              parseAttributeTypeAndValueOk
+    , testCase "attributeTypeAndValueSpaces"          parseAttributeTypeAndValueSpaces
+    , testCase "parseNumericOid"                      parseNumericOid
+    , testCase "relativeDistinguishedNameOk"          parseRelativeDistinguishedNameOk
+    , testCase "relativeDistinguishedNameMultiSpaces" parseRelativeDistinguishedNameMultiSpaces
+    , testCase "relativeDistinguishedNameMultiOk"     parseRelativeDistinguishedNameMultiOk
+    , testCase "distinguishedNameOk"                  parseDistinguishedNameOk
+    , testCase "parseEndOfDnOk"                       parseEndOfDnOk
     ]
   ]
 
@@ -87,6 +89,9 @@ parseDnStringSpacesOk = parserTest dnString "\\ ben kolera\\ " (Right " ben kole
 parseAttributeValueOk :: Assertion
 parseAttributeValueOk = parserTest attributeValue "benkolera" (Right "benkolera")
 
+parseAttributeValueSpaces :: Assertion
+parseAttributeValueSpaces = parserTest attributeValue " ben kolera " (Right "ben kolera")
+
 parseAttributeTypeOk :: Assertion
 parseAttributeTypeOk = traverse_
   (\ (t,e) -> do
@@ -139,6 +144,12 @@ parseRelativeDistinguishedNameMultiOk = parserTest
   "uid=benkolera+cn=Ben Kolera"
   (Right . RelativeDn $ (uid "benkolera") :| [cn "Ben Kolera"])
 
+parseRelativeDistinguishedNameMultiSpaces :: Assertion
+parseRelativeDistinguishedNameMultiSpaces = parserTest
+  relativeDistinguishedName
+  "uid=benkolera + cn=Ben Kolera\\  "
+  (Right . RelativeDn $ (uid "benkolera") :| [cn "Ben Kolera "])
+
 parseDistinguishedNameOk :: Assertion
 parseDistinguishedNameOk = parserTest
   distinguishedName
@@ -147,3 +158,19 @@ parseDistinguishedNameOk = parserTest
     [ rDnSingle $ dc "benkolera"
     , rDnSingle $ dc "com"
     ])
+
+parseEndOfDnOk :: Assertion
+parseEndOfDnOk = traverse_
+  (\(x,e) -> parserTest
+    (endOfDn *> option T.empty (fmap T.singleton (comma <|> plus))) -- Mess around consuming the trailing comma we expect
+    x
+    (Right e))
+  [(" ","")
+  ,("   ","")
+  ,(",",",")
+  ,(" ,",",")
+  ,("   ,",",")
+  ,("+","+")
+  ,(" +","+")
+  ,("   +","+")
+  ]

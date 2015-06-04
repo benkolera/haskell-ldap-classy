@@ -10,7 +10,7 @@ module LDAP.Classy.Dn where
 import           BasePrelude          hiding ((<>))
 
 import           Control.Lens         (Getter, Prism', prism', to)
-import           Data.Attoparsec.Text (Parser,maybeResult,eitherResult,parse,sepBy1,char,many1,option,inClass,satisfy,notInClass,endOfInput,feed)
+import           Data.Attoparsec.Text (Parser,maybeResult,eitherResult,parse,sepBy1,char,many1,option,inClass,satisfy,notInClass,endOfInput,feed,manyTill,skipMany,peekChar)
 import           Data.List.NonEmpty   (NonEmpty((:|)), nonEmpty)
 import qualified Data.List.NonEmpty   as NEL
 import           Data.Semigroup       (Semigroup (..))
@@ -148,19 +148,18 @@ distinguishedName :: Parser Dn
 distinguishedName = Dn . NEL.fromList
   <$> (sepBy1 relativeDistinguishedName comma <* endOfInput)
 
-
 -- relativeDistinguishedName = attributeTypeAndValue
 -- *( PLUS attributeTypeAndValue )
 
 relativeDistinguishedName :: Parser RelativeDn
 relativeDistinguishedName = RelativeDn . NEL.fromList
-   <$> sepBy1 attributeTypeAndValue plus
+   <$> sepBy1 attributeTypeAndValue (plus <* optionalSpace)
 
 -- attributeTypeAndValue = attributeType EQUALS attributeValue
 attributeTypeAndValue :: Parser (AttrType,Text)
 attributeTypeAndValue = (,)
-   <$> (attributeType <* optionalSpace <* equals <* optionalSpace)
-   <*> (attributeValue <* optionalSpace)
+   <$> (attributeType <* optionalSpace <* equals)
+   <*> attributeValue
 
 -- attributeType = descr / numericoid
 attributeType :: Parser AttrType
@@ -203,13 +202,27 @@ numericOid = OidAttrType . read <$>
 -- Simplifying this (probably incorrectly) based on the fact that we've
 -- already gotten to a utf8 decoded Text anyway.
 -- See http://www-01.ibm.com/support/knowledgecenter/SSVJJU_6.4.0/com.ibm.IBMDS.doc_6.4/ds_ag_dir_over_dn_syntax.html
--- TODO: I think there is something missing here with trimming leading/trailing space or something.
--- BUG: Yeah this doesn't allow a string in the middle.
 dnString :: Parser Text
-dnString = fmap T.concat . many1 $ (T.singleton <$> strChar) <|> pair
+dnString = do
+  skipMany space
+  fmap T.concat . manyTill ((T.singleton <$> strChar) <|> pair) $ endOfDn
+
+endOfDn :: Parser ()
+endOfDn = do
+  skipMany space
+  c <- peekChar
+  case c of
+    Just ',' -> return ()
+    Just '+' -> return ()
+    Nothing  -> return ()
+    _        -> mzero
+
+invalidStrCharSet :: [Char]
+invalidStrCharSet = ",#=+;<>\\\x00"
 
 strChar :: Parser Char
-strChar = satisfy (notInClass ",#=+;<>\\\x00")
+strChar =
+  satisfy (notInClass invalidStrCharSet)
 
 escapedSpace :: Parser Char
 escapedSpace = esc *> space
@@ -236,7 +249,7 @@ escaped :: Parser Char
 escaped = dQuote <|> plus <|> comma <|> semiColon <|> lAngle <|> rAngle
 
 optionalSpace :: Parser ()
-optionalSpace = void $ many space
+optionalSpace = skipMany space
 
 -- hexstring = SHARP 1*hexpair
 hexString :: Parser Text
