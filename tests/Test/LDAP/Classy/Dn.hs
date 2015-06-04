@@ -1,17 +1,21 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Test.LDAP.Classy.Dn (dnTests) where
 
-import Test.Tasty (TestTree,testGroup)
-import Test.Tasty.HUnit (Assertion,testCase,(@?=))
+import           Test.Tasty              (TestTree, testGroup)
+import           Test.Tasty.HUnit        (Assertion, testCase, (@?=))
 
-import Control.Applicative ((<*),(*>),(<|>))
-import Data.Semigroup ((<>))
-import Data.Foldable (traverse_)
-import Data.Attoparsec.Text (feed,parse,Parser,eitherResult,endOfInput,option)
-import Data.Text (Text)
-import qualified Data.Text as T
-import Data.List.NonEmpty (NonEmpty((:|)))
-import LDAP.Classy.Dn
+import           Control.Applicative     ((*>), (<*), (<|>))
+import           Data.Attoparsec.Text    (Parser, eitherResult, endOfInput,
+                                          feed, option, parse)
+import           Data.Foldable           (traverse_)
+import           Data.List.NonEmpty      (NonEmpty ((:|)))
+import           Data.Semigroup          ((<>))
+import           Data.Text               (Text)
+import qualified Data.Text               as T
+
+import           LDAP.Classy.Dn
+import           LDAP.Classy.Dn.Internal
+import           LDAP.Classy.Dn.Types
 
 dnTests :: TestTree
 dnTests = testGroup "dn"
@@ -19,6 +23,10 @@ dnTests = testGroup "dn"
     [ testCase "nullCharacter" dnFromTextNull
     , testCase "ok"            dnFromTextOk
     , testCase "craycray"      dnFromTextCrayCray
+    ]
+  , testGroup "toText"
+    [ testCase "ok"            dnToTextOk
+    , testCase "crayCray"      dnToTextCrayCray
     ]
   , testGroup "parsers"
     [ testCase "parsePairOk"                          parsePairOk
@@ -43,26 +51,39 @@ dnFromTextNull :: Assertion
 dnFromTextNull =
   (dnFromText "uid=benkolera\x00,dc=benkolera,dc=com") @?= Nothing
 
+okDnText :: Text
+okDnText = "UID=benkolera,DC=benkolera,DC=com"
+
+okDn :: Dn
+okDn = Dn
+  [ rDnSingle $ uid "benkolera"
+  , rDnSingle $ dc "benkolera"
+  , rDnSingle $ dc "com"
+  ]
+
 dnFromTextOk :: Assertion
-dnFromTextOk = dnFromTextEither "uid=benkolera,dc=benkolera,dc=com" @?= expected
-  where
-    expected  = Right . Dn $
-      [ rDnSingle $ uid "benkolera"
-      , rDnSingle $ dc "benkolera"
-      , rDnSingle $ dc "com"
-      ]
+dnFromTextOk = dnFromTextEither okDnText @?= (Right okDn)
+
+dnToTextOk :: Assertion
+dnToTextOk = dnToText okDn @?= okDnText
+
+crayCrayDnText :: Text
+crayCrayDnText = "UID=benkolera + CN=  Ben Kolera\\ ,1337=foo,DC=benkolera,DC=com"
+
+crayCrayDn :: Dn
+crayCrayDn = Dn
+  [ RelativeDn ( uid "benkolera" :| [cn "Ben Kolera "])
+  , rDnSingle $ oid 1337 "foo"
+  , rDnSingle $ dc "benkolera"
+  , rDnSingle $ dc "com"
+  ]
+
 
 dnFromTextCrayCray :: Assertion
-dnFromTextCrayCray =
-  dnFromTextEither "uid=benkolera + cn=  Ben Kolera\\ ,1337=foo,dc=benkolera,dc=com" @?= expected
-  where
-    expected  = Right . Dn $
-      [ RelativeDn ( uid "benkolera" :| [cn "Ben Kolera "])
-      , rDnSingle $ oid 1337 "foo"
-      , rDnSingle $ dc "benkolera"
-      , rDnSingle $ dc "com"
-      ]
+dnFromTextCrayCray = dnFromTextEither crayCrayDnText @?= (Right crayCrayDn)
 
+dnToTextCrayCray :: Assertion
+dnToTextCrayCray = dnToText crayCrayDn @?= crayCrayDnText
 
 parserTest :: (Eq a, Show a) => Parser a -> Text -> Either String a -> Assertion
 parserTest p t expected = eitherResult (feed (parse (p <* endOfInput) t) "") @?= expected
