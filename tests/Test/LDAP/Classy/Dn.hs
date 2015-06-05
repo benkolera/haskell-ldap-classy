@@ -28,6 +28,7 @@ dnTests = testGroup "dn"
     [ testCase "ok"            dnToTextOk
     , testCase "crayCray"      dnToTextCrayCray
     , testCase "escapedPlus"   dnToTextEscapedPlus
+    , testCase "escapedNull"   dnToTextEscapedNull
     ]
   , testGroup "parsers"
     [ testCase "parsePairOk"                          parsePairOk
@@ -89,6 +90,11 @@ dnToTextEscapedPlus :: Assertion
 dnToTextEscapedPlus = dnToText dn @?= "UID=ben\\+broken@gmail.com,DC=benkolera,DC=com"
   where
     dn = (Dn [rDnSingle $ uid "ben+broken@gmail.com",rDnSingle $ dc "benkolera",rDnSingle $ dc "com"])
+
+dnToTextEscapedNull :: Assertion
+dnToTextEscapedNull = dnToText dn @?= "UID=ben@gmail.com,DC=benkolera,DC=com"
+  where
+    dn = (Dn [rDnSingle $ uid "ben@gmail.com\x00",rDnSingle $ dc "benkolera",rDnSingle $ dc "com"])
 
 parserTest :: (Eq a, Show a) => Parser a -> Text -> Either String a -> Assertion
 parserTest p t expected = eitherResult (feed (parse (p <* endOfInput) t) "") @?= expected
