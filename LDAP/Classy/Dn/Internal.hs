@@ -41,8 +41,9 @@ attrValueToText :: Text -> Text
 attrValueToText = foldMap dnValuePartText . parseDnTextParts
 
 dnValuePartText :: DnValuePart -> Text
-dnValuePartText (DnValueText t)    = t
-dnValuePartText (DnValueSpecial c) = "\\" <> T.singleton c
+dnValuePartText (DnValueText t)         = t
+dnValuePartText (DnValueSpecial '\x00') = ""  -- No one needs that. Haha.
+dnValuePartText (DnValueSpecial c)      = "\\" <> T.singleton c
 
 parseDnTextParts :: Text -> [DnValuePart]
 parseDnTextParts = either (const []) id . parseDnTextPartsEither
