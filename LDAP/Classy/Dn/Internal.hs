@@ -3,21 +3,23 @@
 {-# LANGUAGE TupleSections     #-}
 module LDAP.Classy.Dn.Internal where
 
-import           BasePrelude          hiding ((<>))
+import           BasePrelude            hiding ((<>))
 
-import           Control.Lens         (Getter, Prism', prism', to)
-import           Data.Attoparsec.Text (Parser, char, eitherResult, endOfInput,
-                                       feed, inClass, many1, manyTill,
-                                       maybeResult, notInClass, option, parse,
-                                       peekChar, satisfy, sepBy, sepBy1,
-                                       skipMany, takeText)
-import           Data.List.NonEmpty   (NonEmpty ((:|)), nonEmpty)
-import qualified Data.List.NonEmpty   as NEL
-import qualified Data.Monoid          as M
-import           Data.Semigroup       (Semigroup (..))
-import           Data.Text            (Text)
-import qualified Data.Text            as T
-import           LDAP                 (LDAPEntry (..))
+import           Control.Lens           (Getter, Prism', prism', to)
+import           Data.Attoparsec.Text   (Parser, char, eitherResult, endOfInput,
+                                         feed, inClass, many1, manyTill,
+                                         maybeResult, notInClass, option, parse,
+                                         peekChar, satisfy, sepBy, sepBy1,
+                                         skipMany, takeText)
+import           Data.ByteString.Base16 as B16
+import           Data.List.NonEmpty     (NonEmpty ((:|)), nonEmpty)
+import qualified Data.List.NonEmpty     as NEL
+import qualified Data.Monoid            as M
+import           Data.Semigroup         (Semigroup (..))
+import           Data.Text              (Text)
+import qualified Data.Text              as T
+import qualified Data.Text.Encoding     as T
+import           LDAP                   (LDAPEntry (..))
 
 import           LDAP.Classy.Dn.Types
 
@@ -191,9 +193,7 @@ pair :: Parser Text
 pair = esc *>
   (   (T.singleton <$> esc)
   <|> (T.singleton <$> special)
--- Our datastructure can't handle the hex pairs well nor do I have a
--- use for it. Lets omit unless it is needed later.
---  <|> hexPair
+  <|> hexPair
   )
 
 singletonParser :: Parser Char -> Parser Text
@@ -215,8 +215,15 @@ hexString :: Parser Text
 hexString = sharp *> (T.concat <$> many1 hexPair)
 
 -- hexpair = HEX HEX
+-- WARNING: This is making the assumption that all escaped hex pairs
+-- only represent LATIN1 or ASCII characters. It does not join together
+-- adjacent hexpairs and decode the resulting bytes as UTF8.
+-- This doesn't seem a problem to me right now as the only things that
+-- get escaped are the special characters.
 hexPair :: Parser Text
-hexPair = (\ a b -> T.pack [a,b]) <$> hex <*> hex
+hexPair = hexToChar <$> hex <*> hex
+  where
+    hexToChar a b = T.decodeUtf8 . fst . B16.decode . T.encodeUtf8 . T.pack $ [a,b]
 
 notInClassP :: String -> Parser Char
 notInClassP = satisfy . notInClass

@@ -2,7 +2,7 @@
 -- documentation, see http://haskell.org/cabal/users-guide/
 
 name:                ldap-classy
-version:             0.4.0.3
+version:             0.4.0.4
 synopsis:            An opinionated typeclassy layer on top of the LDAP library.
 -- description:
 homepage:            https://github.com/benkolera/haskell-ldap-classy
@@ -38,6 +38,7 @@ library
     , base64-bytestring == 1.0.*
     , bifunctors        == 4.2.*
     , bytestring        == 0.10.*
+    , base16-bytestring == 0.1.*
     , exceptions        >= 0.6 && < 0.9
     , hoist-error       == 0.1.*
     , lens              == 4.8.*
@@ -88,6 +89,7 @@ test-suite tasty
     , base64-bytestring == 1.0.*
     , bifunctors        == 4.2.*
     , bytestring        == 0.10.*
+    , base16-bytestring == 0.1.*
     , exceptions        >= 0.6 && < 0.9
     , hoist-error       == 0.1.*
     , lens              == 4.8.*
