@@ -66,7 +66,7 @@ innerValueParts = hlpr []
     hlpr acc  = base acc <|> recur acc
     base acc  =
       ((reverse . (:acc) . DnValueSpecial) <$> lastSpace)
-      <|> (endOfInput *> pure acc)
+      <|> (endOfInput *> pure (reverse acc))
     recur acc = innerValuePartChar >>= hlpr . (:acc)
 
 innerValuePartChar :: Parser DnValuePart
@@ -76,7 +76,7 @@ innerValuePartChar =
   <|> (DnValueSpecial <$> innerSpace)
 
 innerValueText :: Parser DnValuePart
-innerValueText = DnValueText . T.pack <$> many innerValueStrChar
+innerValueText = DnValueText . T.pack <$> many1 innerValueStrChar
 
 innerValueStrChar :: Parser Char
 innerValueStrChar = innerSpace <|> notInClassP (invalidStrCharSet <> " ")
