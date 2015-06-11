@@ -8,7 +8,12 @@ This comes in three main parts:
 
 - Providing Types and functions for representing and combining DNs and SearchFilters.
 - Providing safe way to serialize these to strings and back.
-- Providing some ToLDAPEntry FromLDAPEntry typeclasses for going back and forth between Entries and haskell data types.
+- Providing some ToLDAPEntry FromLDAPEntry typeclasses for going back and forth between Entries
+  and haskell data types.
+
+It's a possibility that the Dn and SearchFilter stuff gets separated from the Typeclass stuff as
+the encode/decode to/from entry makes use of mtl and classy optics because it fits into our
+application better that way. :) 
 
 ## RFCs 
 
