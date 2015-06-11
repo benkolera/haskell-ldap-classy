@@ -32,6 +32,7 @@ import LDAP.Classy.ParsingUtils   (invalidStrCharSet)
 
 -- Lots of things aren't implemented here, sadly:
 -- TODO: Putting a search in the middle of a string (cn ==. "Ben*Kolera") currently escapes to cn=Ben\*Kolera. 
+-- TODO: Any kind of safety around the keys. You can break things by going "cn=" ==. "foo".
 -- TODO: Extensible Matches
 -- TODO: Substring searches
 -- TODO: Actual use of the present and ~= operators from LDAP
