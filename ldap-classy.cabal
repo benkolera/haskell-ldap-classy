@@ -31,6 +31,7 @@ library
   other-modules:
       LDAP.Classy.Dn.Internal
     , LDAP.Classy.Dn.Types
+    , LDAP.Classy.ParsingUtils
   build-depends:
       base >=4.7 && <4.9
     , base-prelude
@@ -51,6 +52,7 @@ library
     , SHA               == 1.6.*
     , text              == 1.2.*
     , transformers      == 0.4.*
+  ghc-options: -Wall -Werror -fwarn-tabs
   default-language:    Haskell2010
 
 executable example
@@ -61,7 +63,7 @@ executable example
   else
     buildable: False
   build-depends:
-      base >=4.7 && <4.9
+      base                  >=4.7 && <4.9
     , ldap-classy
     , base-prelude
     , bifunctors            == 4.2.*
@@ -81,9 +83,9 @@ test-suite tasty
   hs-source-dirs: tests, .
   main-is: Tasty.hs
   build-depends:
-      base        >= 4     && < 5
-    , tasty       >= 0.10
-    , tasty-hunit >= 0.9.2
+      base              >= 4     && < 5
+    , tasty             >= 0.10
+    , tasty-hunit       >= 0.9.2
     , base-prelude
     , attoparsec        == 0.13.*
     , base64-bytestring == 1.0.*
@@ -91,6 +93,7 @@ test-suite tasty
     , bytestring        == 0.10.*
     , base16-bytestring == 0.1.*
     , exceptions        >= 0.6 && < 0.9
+    , hlint             == 1.9.*
     , hoist-error       == 0.1.*
     , lens              == 4.8.*
     , LDAP              == 0.6.*

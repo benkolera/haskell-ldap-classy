@@ -9,6 +9,7 @@ module LDAP.Classy.Dn
   , _DnText
   -- Other DN functions
   , isParentOf
+  , isChildOf
   , dnToText
   -- Dn Construction combinators
   , dnCons
@@ -17,18 +18,6 @@ module LDAP.Classy.Dn
   , dnFromText
   , dnFromTextEither
   , dnFromEntry
-  -- Attr Type Smart Constructors
-  , uid
-  , cn
-  , ou
-  , dc
-  , l
-  , st
-  , o
-  , c
-  , street
-  , oid
-  , otherAttrType
   ) where
 
 import           BasePrelude             hiding ((<>))
@@ -47,48 +36,16 @@ import qualified Data.Text               as T
 import           LDAP                    (LDAPEntry (..))
 
 import           LDAP.Classy.Dn.Internal
+import           LDAP.Classy.AttributeType (AttributeType)
 import           LDAP.Classy.Dn.Types
-
-uid :: Text -> (AttrType,Text)
-uid = (UserId,)
-
-cn :: Text -> (AttrType,Text)
-cn = (CommonName,)
-
-ou :: Text -> (AttrType,Text)
-ou = (OrganizationalUnitName,)
-
-dc :: Text -> (AttrType,Text)
-dc = (DomainComponent,)
-
-l :: Text -> (AttrType,Text)
-l = (LocalityName,)
-
-st :: Text -> (AttrType,Text)
-st = (StateOrProvinceName,)
-
-o :: Text -> (AttrType,Text)
-o = (OrganizationName,)
-
-c :: Text -> (AttrType,Text)
-c = (CountryName,)
-
-street :: Text -> (AttrType,Text)
-street = (StreetAddress,)
-
-oid :: Integer -> Text -> (AttrType,Text)
-oid o = (OidAttrType o,)
-
-otherAttrType :: Text -> Text -> Maybe AttrType
-otherAttrType _ _ = Nothing
 
 dnCons :: RelativeDn -> Dn -> Dn
 dnCons p (Dn nel) = Dn (p : nel)
 
-rDnSingle :: (AttrType,Text) -> RelativeDn
+rDnSingle :: (AttributeType,Text) -> RelativeDn
 rDnSingle = RelativeDn . (:| [])
 
-rDnCons :: (AttrType,Text) -> RelativeDn -> RelativeDn
+rDnCons :: (AttributeType,Text) -> RelativeDn -> RelativeDn
 rDnCons kv (RelativeDn nel) = RelativeDn (NEL.cons kv nel)
 
 isParentOf :: Dn -> Dn -> Bool

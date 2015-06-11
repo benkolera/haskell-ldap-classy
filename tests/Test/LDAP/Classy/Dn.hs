@@ -14,6 +14,7 @@ import           Data.Text               (Text)
 import qualified Data.Text               as T
 
 import           LDAP.Classy.Dn
+import           LDAP.Classy.AttributeType
 import           LDAP.Classy.Dn.Internal
 import           LDAP.Classy.Dn.Types
 
@@ -154,16 +155,16 @@ parseAttributeTypeAndValueOid :: Assertion
 parseAttributeTypeAndValueOid =
   parserTest attributeTypeAndValue
     "1337=benkolera"
-    (Right (OidAttrType 1337,"benkolera"))
+    (Right (OidAttributeType 1337,"benkolera"))
 
 parseNumericOid :: Assertion
-parseNumericOid = parserTest numericOid "1337" (Right $ OidAttrType 1337)
+parseNumericOid = parserTest numericOid "1337" (Right $ OidAttributeType 1337)
 
 parseAttributeTypeAndValueOther :: Assertion
 parseAttributeTypeAndValueOther =
   parserTest attributeTypeAndValue
     "butts=benkolera"
-    (Right (OtherAttrType "butts","benkolera"))
+    (Right (OtherAttributeDescr "butts","benkolera"))
 
 parseAttributeTypeAndValueSpaces :: Assertion
 parseAttributeTypeAndValueSpaces =

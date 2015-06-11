@@ -23,6 +23,15 @@ import BasePrelude        hiding (first, try, (<>))
 import Data.List.NonEmpty (NonEmpty (..), (<|))
 import Data.Semigroup     ((<>))
 
+-- The RFC for these rules are here: https://tools.ietf.org/search/rfc2254
+-- and here: https://tools.ietf.org/search/rfc2251
+
+-- Lots of things aren't implemented here, sadly:
+-- - Escaping leading/trailing spaces
+-- - Extensible Matches
+-- - Substring searches
+-- - Actual use of the present and ~= operators
+
 data MatchExpr
   = ExactMatch String
   | LeftAnchored String
@@ -211,6 +220,7 @@ listExprStr o es = wrapParens $ o <> foldMap ldapSearchStr es
 wrapParens :: String -> String
 wrapParens s = "(" <> s <> ")"
 
+-- This doesn't even come close to working. >_<
 -- https://www.owasp.org/index.php/Preventing_LDAP_Injection_in_Java
 -- But what about '=',"<",">" (esp for keys)?
 escape :: String -> String
@@ -218,7 +228,7 @@ escape "\\" = "\\"
 escape "*"  = "\\*"
 escape "("  = "\\("
 escape ")"  = "\\)"
-escape "\0" = "\\00"
+escape "\0" = "\\00" -- This is silly. Th
 escape a    = a
 
 isPosixAccount :: LdapSearch
