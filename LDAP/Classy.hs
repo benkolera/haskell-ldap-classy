@@ -37,8 +37,8 @@ module LDAP.Classy
   , runLdapSimple
   , connectLdap
   , module LDAP
-  , module LDAP.Classy.Types
-  , module LDAP.Classy.Dn
+  , module Types
+  , module Dn
   ) where
 
 import           BasePrelude               hiding (delete, first, insert, try)
@@ -67,10 +67,10 @@ import           LDAP.Classy.Decode        (AsLdapEntryDecodeError,
                                             LdapEntryDecodeError,
                                             ToLdapEntry (..),
                                             _LdapEntryDecodeError)
-import           LDAP.Classy.Dn
+import           LDAP.Classy.Dn            as Dn
 import           LDAP.Classy.Search        (LdapSearch, ldapSearchStr)
 import           LDAP.Classy.SSha          (toSSha)
-import           LDAP.Classy.Types
+import           LDAP.Classy.Types         as Types
 import           Safe                      (headMay)
 
 data LdapCredentials = LdapCredentials
@@ -264,7 +264,7 @@ runLdap m = do
 
 doLdap :: (MonadError a m, MonadIO m, Applicative m) => r -> ExceptT a (ReaderT r IO) b -> m b
 doLdap env m' = do
-  e <- liftIO $ (runReaderT (runExceptT m') env)
+  e <- liftIO $ runReaderT (runExceptT m') env
   either throwError pure e
 
 runLdapSimple

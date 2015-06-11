@@ -55,7 +55,7 @@ isParentOf (Dn p) (Dn c) = pl < cl && drop (cl - pl) c == p
     cl = length c
 
 isChildOf :: Dn -> Dn -> Bool
-isChildOf c p = c /= p && (isParentOf p c)
+isChildOf c p = c /= p && isParentOf p c
 
 -- We're assuming that the LDAP server is going to return a valid DN
 dnFromEntry :: LDAPEntry -> Dn

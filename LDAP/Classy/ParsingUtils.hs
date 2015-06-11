@@ -6,7 +6,7 @@ notInClassP :: String -> Parser Char
 notInClassP = satisfy . notInClass
 
 inClassP :: String -> Parser Char
-inClassP butts = satisfy . inClass $ butts
+inClassP = satisfy . inClass 
 
-invalidStrCharSet :: [Char]
+invalidStrCharSet :: String
 invalidStrCharSet = ",#=+;<>\\\x00"

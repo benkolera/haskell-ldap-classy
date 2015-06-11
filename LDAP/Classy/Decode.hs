@@ -163,7 +163,7 @@ instance ToLdapAttribute String where
   toLdapAttribute = id
 
 instance FromLdapEntry LDAPEntry where
-  fromLdapEntry = pure . id
+  fromLdapEntry = pure 
 
 instance ToLdapEntry LDAPEntry where
   toLdapEntry = id

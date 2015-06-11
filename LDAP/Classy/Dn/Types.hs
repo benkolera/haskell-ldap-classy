@@ -1,4 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
 module LDAP.Classy.Dn.Types where
 
 import           Control.Lens       (makePrisms)

@@ -1,5 +1,6 @@
 module Main where
 
+import Control.Monad          (unless)
 import Test.Tasty
 import Test.Tasty.HUnit
 import Test.LDAP.Classy.Dn    (dnTests)
@@ -13,4 +14,4 @@ tests = testGroup "Tests" [dnTests,hlintTests]
 hlintTests :: TestTree
 hlintTests = testCase "HLint check" $ do
   result <- hlint [ "LDAP/" ]
-  result @?= []
+  unless (null result) $ assertFailure "There were HLint errors, sry!"
