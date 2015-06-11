@@ -14,6 +14,7 @@ import           Data.Text               (Text)
 import qualified Data.Text               as T
 
 import           LDAP.Classy.Dn
+import           LDAP.Classy.AttributeType
 import           LDAP.Classy.Dn.Internal
 import           LDAP.Classy.Dn.Types
 
@@ -35,6 +36,7 @@ dnTests = testGroup "dn"
     , testCase "dnStringOk"                           parseDnStringOk
     , testCase "dnStringSpacesOk"                     parseDnStringSpacesOk
     , testCase "attributeValueOk"                     parseAttributeValueOk
+    , testCase "attributeValueHexPair"                parseAttributeValueHexPair
     , testCase "attributeTypeOk"                      parseAttributeTypeOk
     , testCase "attributeTypeAndValueOid"             parseAttributeTypeAndValueOid
     , testCase "attributeTypeAndValueOther"           parseAttributeTypeAndValueOther
@@ -70,11 +72,11 @@ dnToTextOk :: Assertion
 dnToTextOk = dnToText okDn @?= okDnText
 
 crayCrayDnText :: Text
-crayCrayDnText = "UID=benkolera + CN=  Ben Kolera\\ ,1337=foo,DC=benkolera,DC=com"
+crayCrayDnText = "UID=benkolera\\2Btroll@gmail.com + CN=  Ben Kolera\\ ,1337=foo,DC=benkolera,DC=com"
 
 crayCrayDn :: Dn
 crayCrayDn = Dn
-  [ RelativeDn ( uid "benkolera" :| [cn "Ben Kolera "])
+  [ RelativeDn ( uid "benkolera+troll@gmail.com" :| [cn "Ben Kolera "])
   , rDnSingle $ oid 1337 "foo"
   , rDnSingle $ dc "benkolera"
   , rDnSingle $ dc "com"
@@ -84,7 +86,7 @@ dnFromTextCrayCray :: Assertion
 dnFromTextCrayCray = dnFromTextEither crayCrayDnText @?= (Right crayCrayDn)
 
 dnToTextCrayCray :: Assertion
-dnToTextCrayCray = dnToText crayCrayDn @?= "UID=benkolera+CN=Ben Kolera\\ ,1337=foo,DC=benkolera,DC=com"
+dnToTextCrayCray = dnToText crayCrayDn @?= "UID=benkolera\\+troll@gmail.com+CN=Ben Kolera\\ ,1337=foo,DC=benkolera,DC=com"
 
 dnToTextEscapedPlus :: Assertion
 dnToTextEscapedPlus = dnToText dn @?= "UID=ben\\+broken@gmail.com,DC=benkolera,DC=com"
@@ -122,6 +124,9 @@ parseDnStringSpacesOk = parserTest dnString "\\ ben kolera\\ " (Right " ben kole
 parseAttributeValueOk :: Assertion
 parseAttributeValueOk = parserTest attributeValue "benkolera" (Right "benkolera")
 
+parseAttributeValueHexPair :: Assertion
+parseAttributeValueHexPair = parserTest attributeValue "benkolera\\2Btroll@gmail.com" (Right "benkolera+troll@gmail.com")
+
 parseAttributeValueSpaces :: Assertion
 parseAttributeValueSpaces = parserTest attributeValue " ben kolera " (Right "ben kolera")
 
@@ -150,16 +155,16 @@ parseAttributeTypeAndValueOid :: Assertion
 parseAttributeTypeAndValueOid =
   parserTest attributeTypeAndValue
     "1337=benkolera"
-    (Right (OidAttrType 1337,"benkolera"))
+    (Right (OidAttributeType 1337,"benkolera"))
 
 parseNumericOid :: Assertion
-parseNumericOid = parserTest numericOid "1337" (Right $ OidAttrType 1337)
+parseNumericOid = parserTest numericOid "1337" (Right $ OidAttributeType 1337)
 
 parseAttributeTypeAndValueOther :: Assertion
 parseAttributeTypeAndValueOther =
   parserTest attributeTypeAndValue
     "butts=benkolera"
-    (Right (OtherAttrType "butts","benkolera"))
+    (Right (OtherAttributeDescr "butts","benkolera"))
 
 parseAttributeTypeAndValueSpaces :: Assertion
 parseAttributeTypeAndValueSpaces =

@@ -1,4 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
 module LDAP.Classy.Dn.Types where
 
 import           Control.Lens       (makePrisms)
@@ -9,35 +8,10 @@ import           Data.Semigroup     (Semigroup ((<>)))
 import           Data.Text          (Text)
 import qualified Data.Text          as T
 
-data AttrType
-  = LocalityName
-  | CommonName
-  | StateOrProvinceName
-  | OrganizationName
-  | OrganizationalUnitName
-  | CountryName
-  | StreetAddress
-  | DomainComponent
-  | UserId
-  | OtherAttrType Text
-  | OidAttrType Integer
-  deriving (Eq)
-
-instance Show AttrType where
-  show LocalityName           = "L"
-  show CommonName             = "CN"
-  show StateOrProvinceName    = "ST"
-  show OrganizationName       = "O"
-  show OrganizationalUnitName = "OU"
-  show CountryName            = "C"
-  show StreetAddress          = "STREET"
-  show DomainComponent        = "DC"
-  show UserId                 = "UID"
-  show (OtherAttrType t)      = T.unpack t
-  show (OidAttrType i)        = show i
+import LDAP.Classy.AttributeType    (AttributeType)
 
 newtype RelativeDn = RelativeDn
-  { unRelativeDn :: NonEmpty (AttrType,Text)
+  { unRelativeDn :: NonEmpty (AttributeType,Text)
   } deriving (Eq)
 
 -- BUG: Note that our derived equality here doesn't work in all cases
