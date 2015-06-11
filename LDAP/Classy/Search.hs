@@ -27,8 +27,9 @@ import Data.Semigroup     ((<>))
 import LDAP.Classy.AttributeValue (escapeAttrValueTextExtraEscape)
 import LDAP.Classy.ParsingUtils   (invalidStrCharSet)
 
--- The RFC for these rules are here: https://tools.ietf.org/search/rfc2254
--- and here: https://tools.ietf.org/search/rfc2251
+-- It's worthwhile checking out these RFCs:
+-- - https://tools.ietf.org/html/rfc4512
+-- - https://tools.ietf.org/html/rfc4515
 
 -- Lots of things aren't implemented here, sadly:
 -- TODO: Putting a search in the middle of a string (cn ==. "Ben*Kolera") currently escapes to cn=Ben\*Kolera. 
