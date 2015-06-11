@@ -5,21 +5,17 @@ module LDAP.Classy.Dn.Internal where
 
 import           BasePrelude            hiding ((<>))
 
-import           Control.Lens           (Getter, Prism', prism', to)
-import           Data.Attoparsec.Text   (Parser, char, eitherResult, endOfInput,
-                                         feed, inClass, many1, manyTill,
-                                         maybeResult, notInClass, option, parse,
+import           Data.Attoparsec.Text   (Parser, char, endOfInput,
+                                         many1, manyTill,
+                                         notInClass, 
                                          peekChar, satisfy, sepBy, sepBy1,
-                                         skipMany, takeText)
+                                         skipMany)
 import           Data.ByteString.Base16 as B16
-import           Data.List.NonEmpty     (NonEmpty ((:|)), nonEmpty)
 import qualified Data.List.NonEmpty     as NEL
-import qualified Data.Monoid            as M
 import           Data.Semigroup         (Semigroup (..))
 import           Data.Text              (Text)
 import qualified Data.Text              as T
 import qualified Data.Text.Encoding     as T
-import           LDAP                   (LDAPEntry (..))
 
 import           LDAP.Classy.Dn.Types
 import           LDAP.Classy.AttributeType

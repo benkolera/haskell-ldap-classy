@@ -16,7 +16,6 @@ import qualified Data.Text               as T
 import           LDAP.Classy.Dn
 import           LDAP.Classy.AttributeType
 import           LDAP.Classy.Dn.Internal
-import           LDAP.Classy.Dn.Types
 
 dnTests :: TestTree
 dnTests = testGroup "dn"
@@ -42,6 +41,7 @@ dnTests = testGroup "dn"
     , testCase "attributeTypeAndValueOther"           parseAttributeTypeAndValueOther
     , testCase "attributeTypeAndValueOk"              parseAttributeTypeAndValueOk
     , testCase "attributeTypeAndValueSpaces"          parseAttributeTypeAndValueSpaces
+    , testCase "attributeValueSpaces"                 parseAttributeValueSpaces
     , testCase "parseNumericOid"                      parseNumericOid
     , testCase "relativeDistinguishedNameOk"          parseRelativeDistinguishedNameOk
     , testCase "relativeDistinguishedNameMultiSpaces" parseRelativeDistinguishedNameMultiSpaces
@@ -103,7 +103,7 @@ parserTest p t expected = eitherResult (feed (parse (p <* endOfInput) t) "") @?=
 
 parsePairOk :: Assertion
 parsePairOk =
-  traverse_ (\ c -> parserTest pair ("\\" <> c) (Right c))
+  traverse_ (\ ch -> parserTest pair ("\\" <> ch) (Right ch))
     [ " "
     , "#"
     , "+"

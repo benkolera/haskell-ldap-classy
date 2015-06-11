@@ -6,6 +6,7 @@ import Test.Tasty.HUnit
 import Test.LDAP.Classy.Dn    (dnTests)
 import Language.Haskell.HLint (hlint)
 
+main :: IO ()
 main = defaultMain tests
 
 tests :: TestTree
