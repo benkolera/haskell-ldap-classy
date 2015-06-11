@@ -34,7 +34,7 @@ relativeDnToText :: RelativeDn -> Text
 relativeDnToText =
   T.intercalate "+"
   . toList
-  . fmap (\ (k,v) -> attrTypeToText k <> "=" <> attrValueToText v)
+  . fmap (\ (k,v) -> attrTypeToText k <> "=" <> escapeAttrValueText v)
   . unRelativeDn
 
 -- distinguishedName =

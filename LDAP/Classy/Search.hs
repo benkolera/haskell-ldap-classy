@@ -20,17 +20,21 @@ module LDAP.Classy.Search
   ) where
 
 import BasePrelude        hiding (first, try, (<>))
+import Data.Text          (pack,unpack)
 import Data.List.NonEmpty (NonEmpty (..), (<|))
 import Data.Semigroup     ((<>))
+
+import LDAP.Classy.AttributeValue (escapeAttrValueTextExtraEscape)
+import LDAP.Classy.ParsingUtils   (invalidStrCharSet)
 
 -- The RFC for these rules are here: https://tools.ietf.org/search/rfc2254
 -- and here: https://tools.ietf.org/search/rfc2251
 
 -- Lots of things aren't implemented here, sadly:
--- - Escaping leading/trailing spaces
--- - Extensible Matches
--- - Substring searches
--- - Actual use of the present and ~= operators
+-- TODO: Putting a search in the middle of a string (cn ==. "Ben*Kolera") currently escapes to cn=Ben\*Kolera. 
+-- TODO: Extensible Matches
+-- TODO: Substring searches
+-- TODO: Actual use of the present and ~= operators from LDAP
 
 data MatchExpr
   = ExactMatch String
@@ -54,6 +58,8 @@ data MatchExpr
 -- LeftAnchored "as"
 -- >>> "*as*" :: MatchExpr
 -- Unanchored "as"
+-- >>> "*a*s*" :: MatchExpr
+-- Unanchored "a*s"
 -- >>> "*" :: MatchExpr
 -- Present
 instance IsString MatchExpr where
@@ -191,10 +197,16 @@ infixl 4 `in_`
 -- >>> :set -XOverloadedStrings
 -- >>> ldapSearchStr $ "objectClass" ==. "posixAccount"
 -- "(objectClass=posixAccount)"
+-- >>> ldapSearchStr $ "objectClass" ==. " posixAccount "
+-- "(objectClass=\\ posixAccount\\ )"
+-- >>> ldapSearchStr $ "cn" ==. "Ben Kolera"
+-- "(cn=Ben Kolera)"
+-- >>> ldapSearchStr $ "cn" ==. "Ben*Kolera"
+-- "(cn=Ben\\*Kolera)"
 -- >>> ldapSearchStr $ "objectClass" ==. "posixAccount" &&. "uid" ==. "bkolera"
 -- "(&(objectClass=posixAccount)(uid=bkolera))"
--- >>> ldapSearchStr $ "objectClass" ==. "posixAccount" &&. "loginShell" ==. "/bin/zsh" ||. "uid" ==. "bkolera"
--- "(|(&(objectClass=posixAccount)(loginShell=/bin/zsh))(uid=bkolera))"
+-- >>> ldapSearchStr $ "objectClass" ==. "posixAccount" &&. "loginShell" ==. "/bin/zsh" &&. "thingo" ==. "butts" ||. "uid" ==. "bkolera"
+-- "(|(&(objectClass=posixAccount)(loginShell=/bin/zsh)(thingo=butts))(uid=bkolera))"
 -- >>> ldapSearchStr $ "objectClass" ==. "posixAccount" &&. "givenName" <-. "Ben*" :| ["Bob"]
 -- "(&(objectClass=posixAccount)(|(givenName=Ben*)(givenName=Bob)))"
 ldapSearchStr :: LdapSearch -> String
@@ -220,16 +232,8 @@ listExprStr o es = wrapParens $ o <> foldMap ldapSearchStr es
 wrapParens :: String -> String
 wrapParens s = "(" <> s <> ")"
 
--- This doesn't even come close to working. >_<
--- https://www.owasp.org/index.php/Preventing_LDAP_Injection_in_Java
--- But what about '=',"<",">" (esp for keys)?
 escape :: String -> String
-escape "\\" = "\\"
-escape "*"  = "\\*"
-escape "("  = "\\("
-escape ")"  = "\\)"
-escape "\0" = "\\00" -- This is silly. Th
-escape a    = a
+escape = unpack . escapeAttrValueTextExtraEscape "*" . pack
 
 isPosixAccount :: LdapSearch
 isPosixAccount = "objectClass" ==. "posixAccount"

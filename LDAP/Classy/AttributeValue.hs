@@ -1,8 +1,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 module LDAP.Classy.AttributeValue where
 
-import Control.Applicative ((<$>),(<*>),(<|>),pure,(*>))
+import Control.Applicative ((<$>),(<|>),pure,(*>))
+import Control.Monad.Reader (ReaderT,runReaderT,lift,ask)
 import Data.Foldable (foldMap,toList)
+import Data.List (nub)
 import Control.Monad (mzero)
 import Data.Attoparsec.Text (Parser,eitherResult,feed,parse,option,space,endOfInput,many1,peekChar)
 import Data.Semigroup ((<>))
@@ -11,57 +13,62 @@ import qualified Data.Text as T
 
 import LDAP.Classy.ParsingUtils (invalidStrCharSet,notInClassP,inClassP)
 
-newtype AttributeValue = AttributeValue Text
-
 data DnValuePart = DnValueText Text | DnValueSpecial Char deriving Show
 
-attrValueToText :: Text -> Text
-attrValueToText = foldMap dnValuePartText . parseDnTextParts
+escapeAttrValueTextExtraEscape :: String -> Text -> Text
+escapeAttrValueTextExtraEscape extraSpecialChars =
+  foldMap dnValuePartText . parseDnTextParts invalidChars
+  where
+    invalidChars = nub $ invalidStrCharSet <> " " <> extraSpecialChars
+
+escapeAttrValueText :: Text -> Text
+escapeAttrValueText = escapeAttrValueTextExtraEscape ""
 
 dnValuePartText :: DnValuePart -> Text
 dnValuePartText (DnValueText t)         = t
 dnValuePartText (DnValueSpecial '\x00') = ""  -- No one needs that. Haha.
 dnValuePartText (DnValueSpecial c)      = "\\" <> T.singleton c
 
-parseDnTextParts :: Text -> [DnValuePart]
-parseDnTextParts = either (const []) id . parseDnTextPartsEither
+parseDnTextParts :: String -> Text -> [DnValuePart]
+parseDnTextParts invalidSet =
+  either (const []) id . parseDnTextPartsEither invalidSet
 
-parseDnTextPartsEither :: Text -> Either String [DnValuePart]
-parseDnTextPartsEither =
+parseDnTextPartsEither :: String -> Text -> Either String [DnValuePart]
+parseDnTextPartsEither invalidSet =
   eitherResult
   . flip feed ""
-  . parse dnValueParts
+  . parse (runReaderT dnValueParts invalidSet)
 
-dnValueParts :: Parser [DnValuePart]
+dnValueParts :: ReaderT String Parser [DnValuePart]
 dnValueParts = do
-  ls <- option Nothing (Just . DnValueSpecial <$> space)
+  ls <- lift $ option Nothing (Just . DnValueSpecial <$> space)
   ps <- innerValueParts
-  endOfInput
+  lift endOfInput
   pure (toList ls <> ps)
 
-innerValueParts :: Parser [DnValuePart]
+innerValueParts :: ReaderT String Parser [DnValuePart]
 innerValueParts = hlpr []
   where
     hlpr acc  = base acc <|> recur acc
     base acc  =
-      ((reverse . (:acc) . DnValueSpecial) <$> lastSpace)
-      <|> (endOfInput *> pure (reverse acc))
+      ((reverse . (:acc) . DnValueSpecial) <$> lift lastSpace)
+      <|> (lift endOfInput *> pure (reverse acc))
     recur acc = innerValuePartChar >>= hlpr . (:acc)
 
-innerValuePartChar :: Parser DnValuePart
+innerValuePartChar :: ReaderT String Parser DnValuePart
 innerValuePartChar =
   innerValueText
   <|> (DnValueSpecial <$> specialChar)
-  <|> (DnValueSpecial <$> innerSpace)
+  <|> (DnValueSpecial <$> lift innerSpace)
 
-innerValueText :: Parser DnValuePart
+innerValueText :: ReaderT String Parser DnValuePart
 innerValueText = DnValueText . T.pack <$> many1 innerValueStrChar
 
-innerValueStrChar :: Parser Char
-innerValueStrChar = innerSpace <|> notInClassP (invalidStrCharSet <> " ")
+innerValueStrChar :: ReaderT String Parser Char
+innerValueStrChar = lift innerSpace <|> (ask >>= lift . notInClassP)
 
-specialChar :: Parser Char
-specialChar = inClassP invalidStrCharSet
+specialChar :: ReaderT String Parser Char
+specialChar = ask >>= lift . inClassP 
 
 innerSpace :: Parser Char
 innerSpace = do

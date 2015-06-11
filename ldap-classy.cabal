@@ -105,3 +105,10 @@ test-suite tasty
     , SHA               == 1.6.*
     , text              == 1.2.*
     , transformers      == 0.4.*
+
+-- Won't work until ghc 7.10
+-- test-suite doctests
+--   type:          exitcode-stdio-1.0
+--   ghc-options:   -threaded
+--   main-is:       tests/Doctests.hs
+--  build-depends: base, doctest >= 0.8
