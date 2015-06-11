@@ -1,6 +1,8 @@
 # ldap-classy
 
-This is an attempt to write a safer layer over the top of the [LDAP] C bindings.
+This is an attempt to write a safer layer over the top of the
+[LDAP](http://hackage.haskell.org/package/LDAP)
+C bindings.
 
 This comes in three main parts:
 
@@ -12,14 +14,6 @@ This comes in three main parts:
 
 There have been a number of RFCs consulted in the making of the escaping rules:
 
-- [RFC4514] - String Representation of Distinguished Names
-- [RFC4512] - Directory Information Models
-- [RFC2254] - String Representation of LDAP Search Filters
-
-[LDAP] http://hackage.haskell.org/package/LDAP)
-
-[RFC4514](https://tools.ietf.org/html/rfc4514)
-
-[RFC4512](https://tools.ietf.org/html/rfc4512)
-
-[RFC4515](https://tools.ietf.org/html/rfc4515)
+- [RFC4514](https://tools.ietf.org/html/rfc4514) - String Representation of Distinguished Names
+- [RFC4512](https://tools.ietf.org/html/rfc4512) - Directory Information Models
+- [RFC4515](https://tools.ietf.org/html/rfc4515) - String Representation of LDAP Search Filters
