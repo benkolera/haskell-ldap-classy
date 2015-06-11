@@ -16,7 +16,10 @@ There have been a number of RFCs consulted in the making of the escaping rules:
 - [RFC4512] - Directory Information Models
 - [RFC2254] - String Representation of LDAP Search Filters
 
-[LDAP] http://hackage.haskell.org/package/LDAP
-[RFC4514] https://tools.ietf.org/html/rfc4514
-[RFC4512] https://tools.ietf.org/html/rfc4512
-[RFC4515] https://tools.ietf.org/html/rfc4515
+[LDAP] http://hackage.haskell.org/package/LDAP)
+
+[RFC4514](https://tools.ietf.org/html/rfc4514)
+
+[RFC4512](https://tools.ietf.org/html/rfc4512)
+
+[RFC4515](https://tools.ietf.org/html/rfc4515)
