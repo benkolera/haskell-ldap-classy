@@ -25,7 +25,6 @@ import Data.List.NonEmpty (NonEmpty (..), (<|))
 import Data.Semigroup     ((<>))
 
 import LDAP.Classy.AttributeValue (escapeAttrValueTextExtraEscape)
-import LDAP.Classy.ParsingUtils   (invalidStrCharSet)
 
 -- It's worthwhile checking out these RFCs:
 -- - https://tools.ietf.org/html/rfc4512
@@ -200,11 +199,13 @@ infixl 4 `in_`
 -- >>> ldapSearchStr $ "objectClass" ==. "posixAccount"
 -- "(objectClass=posixAccount)"
 -- >>> ldapSearchStr $ "objectClass" ==. " posixAccount "
--- "(objectClass=\\ posixAccount\\ )"
+-- "(objectClass=\\20posixAccount\\20)"
 -- >>> ldapSearchStr $ "cn" ==. "Ben Kolera"
 -- "(cn=Ben Kolera)"
 -- >>> ldapSearchStr $ "cn" ==. "Ben*Kolera"
--- "(cn=Ben\\*Kolera)"
+-- "(cn=Ben\\2aKolera)"
+-- >>> ldapSearchStr $ "uid" ==. "ben+troll@iseek.com.au"
+-- "(uid=ben\\2btroll@iseek.com.au)"
 -- >>> ldapSearchStr $ "objectClass" ==. "posixAccount" &&. "uid" ==. "bkolera"
 -- "(&(objectClass=posixAccount)(uid=bkolera))"
 -- >>> ldapSearchStr $ "objectClass" ==. "posixAccount" &&. "loginShell" ==. "/bin/zsh" &&. "thingo" ==. "butts" ||. "uid" ==. "bkolera"

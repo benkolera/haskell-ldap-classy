@@ -3,6 +3,8 @@ module LDAP.Classy.AttributeValue where
 
 import Control.Applicative ((<$>),(<|>),pure,(*>))
 import Control.Monad.Reader (ReaderT,runReaderT,lift,ask)
+import qualified Data.ByteString.Char8 as BS8
+import qualified Data.ByteString.Base16 as BS16
 import Data.Foldable (foldMap,toList)
 import Data.List (nub)
 import Control.Monad (mzero)
@@ -10,6 +12,7 @@ import Data.Attoparsec.Text (Parser,eitherResult,feed,parse,option,space,endOfIn
 import Data.Semigroup ((<>))
 import Data.Text (Text)
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as T(decodeUtf8) 
 
 import LDAP.Classy.ParsingUtils (invalidStrCharSet,notInClassP,inClassP)
 
@@ -27,7 +30,8 @@ escapeAttrValueText = escapeAttrValueTextExtraEscape ""
 dnValuePartText :: DnValuePart -> Text
 dnValuePartText (DnValueText t)         = t
 dnValuePartText (DnValueSpecial '\x00') = ""  -- No one needs that. Haha.
-dnValuePartText (DnValueSpecial c)      = "\\" <> T.singleton c
+-- We're okay to use ByteString.Char8 here since specialChar parses no non-ascii characters
+dnValuePartText (DnValueSpecial c)      = "\\" <> T.decodeUtf8 (BS16.encode . BS8.pack $ [c])
 
 parseDnTextParts :: String -> Text -> [DnValuePart]
 parseDnTextParts invalidSet =

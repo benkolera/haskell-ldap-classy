@@ -16,7 +16,6 @@ import qualified Data.Text               as T
 import           LDAP.Classy.Dn
 import           LDAP.Classy.AttributeType
 import           LDAP.Classy.Dn.Internal
-import           LDAP.Classy.Dn.Types
 
 dnTests :: TestTree
 dnTests = testGroup "dn"
@@ -42,6 +41,7 @@ dnTests = testGroup "dn"
     , testCase "attributeTypeAndValueOther"           parseAttributeTypeAndValueOther
     , testCase "attributeTypeAndValueOk"              parseAttributeTypeAndValueOk
     , testCase "attributeTypeAndValueSpaces"          parseAttributeTypeAndValueSpaces
+    , testCase "attributeValueSpaces"                 parseAttributeValueSpaces
     , testCase "parseNumericOid"                      parseNumericOid
     , testCase "relativeDistinguishedNameOk"          parseRelativeDistinguishedNameOk
     , testCase "relativeDistinguishedNameMultiSpaces" parseRelativeDistinguishedNameMultiSpaces
@@ -86,10 +86,10 @@ dnFromTextCrayCray :: Assertion
 dnFromTextCrayCray = dnFromTextEither crayCrayDnText @?= (Right crayCrayDn)
 
 dnToTextCrayCray :: Assertion
-dnToTextCrayCray = dnToText crayCrayDn @?= "UID=benkolera\\+troll@gmail.com+CN=Ben Kolera\\ ,1337=foo,DC=benkolera,DC=com"
+dnToTextCrayCray = dnToText crayCrayDn @?= "UID=benkolera\\2btroll@gmail.com+CN=Ben Kolera\\20,1337=foo,DC=benkolera,DC=com"
 
 dnToTextEscapedPlus :: Assertion
-dnToTextEscapedPlus = dnToText dn @?= "UID=ben\\+broken@gmail.com,DC=benkolera,DC=com"
+dnToTextEscapedPlus = dnToText dn @?= "UID=ben\\2bbroken@gmail.com,DC=benkolera,DC=com"
   where
     dn = (Dn [rDnSingle $ uid "ben+broken@gmail.com",rDnSingle $ dc "benkolera",rDnSingle $ dc "com"])
 
@@ -103,7 +103,7 @@ parserTest p t expected = eitherResult (feed (parse (p <* endOfInput) t) "") @?=
 
 parsePairOk :: Assertion
 parsePairOk =
-  traverse_ (\ c -> parserTest pair ("\\" <> c) (Right c))
+  traverse_ (\ ch -> parserTest pair ("\\" <> ch) (Right ch))
     [ " "
     , "#"
     , "+"

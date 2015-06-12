@@ -23,12 +23,8 @@ module LDAP.Classy.Dn
 import           BasePrelude             hiding ((<>))
 
 import           Control.Lens            (Getter, Prism', prism', to)
-import           Data.Attoparsec.Text    (Parser, char, eitherResult,
-                                          endOfInput, feed, inClass, many1,
-                                          manyTill, maybeResult, notInClass,
-                                          option, parse, peekChar, satisfy,
-                                          sepBy, sepBy1, skipMany)
-import           Data.List.NonEmpty      (NonEmpty ((:|)), nonEmpty)
+import           Data.Attoparsec.Text    (eitherResult, feed, parse)
+import           Data.List.NonEmpty      (NonEmpty ((:|)))
 import qualified Data.List.NonEmpty      as NEL
 import           Data.Semigroup          ((<>))
 import           Data.Text               (Text)
