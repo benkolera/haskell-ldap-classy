@@ -1,12 +1,9 @@
 module LDAP.Classy.Dn.Types where
 
-import           Control.Lens       (makePrisms)
 import           Data.List.NonEmpty (NonEmpty)
 import           Data.Monoid        (Monoid (mappend, mempty))
-import qualified Data.Monoid        as M
 import           Data.Semigroup     (Semigroup ((<>)))
 import           Data.Text          (Text)
-import qualified Data.Text          as T
 
 import LDAP.Classy.AttributeType    (AttributeType)
 

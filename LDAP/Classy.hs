@@ -39,6 +39,7 @@ module LDAP.Classy
   , module LDAP
   , module Types
   , module Dn
+  , module AttrTypes
   ) where
 
 import           BasePrelude               hiding (delete, first, insert, try)
@@ -62,6 +63,7 @@ import           LDAP                      (LDAP, LDAPEntry (..),
                                             SearchAttributes (..))
 import qualified LDAP                      as L
 
+import           LDAP.Classy.AttributeType as AttrTypes
 import           LDAP.Classy.Decode        (AsLdapEntryDecodeError,
                                             FromLdapEntry (..),
                                             LdapEntryDecodeError,
@@ -118,9 +120,9 @@ type CanLdap m c e =
 
 findByDn :: ( CanLdap m c e , AsLdapError e, Applicative m, FromLdapEntry a ) => Dn -> SearchAttributes -> m (Maybe a)
 findByDn dn a = do
-  es <- liftLdap $ \ l ->
+  es <- liftLdap $ \ ldap ->
     L.ldapSearch
-    l
+    ldap
     (Just (dn^.dnText.from packed))
     LdapScopeBase
     Nothing
@@ -136,7 +138,7 @@ searchWithScope
   -> LDAPScope
   -> m [a]
 searchWithScope q a dn s = do
-  es <- liftLdap $ \ l -> L.ldapSearch l (dn^?_Just.dnText.from packed) s (Just qs) a False
+  es <- liftLdap $ \ ldap -> L.ldapSearch ldap (dn^?_Just.dnText.from packed) s (Just qs) a False
   traverse fromLdapEntry es
   where
     qs = ldapSearchStr q
@@ -168,15 +170,15 @@ searchFirst :: ( CanLdap m c e , AsLdapError e, Applicative m, FromLdapEntry a )
 searchFirst q = fmap headMay . search q
 
 modify :: (CanLdap m c e, AsLdapError e) => Dn -> [LDAPMod] -> m ()
-modify dn mods = liftLdap $ \ l -> L.ldapModify l (dn^.dnText.from packed) mods
+modify dn mods = liftLdap $ \ ldap -> L.ldapModify ldap (dn^.dnText.from packed) mods
 
 modifyEntry :: (CanLdap m c e, AsLdapError e,ToLdapEntry a) => a -> m ()
 modifyEntry a =
   modify (toLdapDn a) . L.list2ldm LdapModReplace . toLdapAttrs $ a
 
 insert :: (CanLdap m c e, AsLdapError e) => LDAPEntry -> m ()
-insert le = liftLdap $ \ l ->
-  L.ldapAdd l (ledn le)
+insert le = liftLdap $ \ ldap ->
+  L.ldapAdd ldap (ledn le)
   . L.list2ldm LdapModAdd
   . filter (not . null . snd)
   . leattrs $ le
@@ -185,7 +187,7 @@ insertEntry :: (CanLdap m c e, AsLdapError e,ToLdapEntry a) => a -> m ()
 insertEntry = insert . toLdapEntry
 
 delete :: (CanLdap m c e, AsLdapError e) => Dn -> m ()
-delete dn = liftLdap $ \ l -> L.ldapDelete l (dn^.dnText.from packed)
+delete dn = liftLdap $ \ ldap -> L.ldapDelete ldap (dn^.dnText.from packed)
 
 deleteEntry :: (CanLdap m c e, AsLdapError e,ToLdapEntry a) => a -> m ()
 deleteEntry = delete . toLdapDn . toLdapEntry
@@ -222,8 +224,8 @@ checkPassword dn pw = bindLdap dn pw >> bindRootDn
 bindLdap :: (CanLdap m c e, AsLdapError e) => Dn -> Text -> m ()
 bindLdap d p = catching _ConnectException doBind (throwing _BindFailure)
   where
-    doBind = liftLdap $ \ c ->
-      L.ldapSimpleBind c (d^.dnText.from packed) (p^.from packed)
+    doBind = liftLdap $ \ ldap ->
+      L.ldapSimpleBind ldap (d^.dnText.from packed) (p^.from packed)
 
 bindRootDn :: (CanLdap m c e, AsLdapError e,Applicative m) => m ()
 bindRootDn =
@@ -238,11 +240,11 @@ tryLdap :: (MonadError e m, MonadIO m, AsLdapError e) => IO a -> m a
 tryLdap m = (liftIO . try $ m) <%!?> (_ConnectException #)
 
 connectLdap :: (Applicative m, MonadError e m, MonadIO m, AsLdapError e, AsLdapEntryDecodeError e) => LdapConfig -> m LdapEnv
-connectLdap c = do
-  let h = c ^.ldapConfigHost.from packed
-  let p = c ^.ldapConfigPort.to fromIntegral
+connectLdap ldapC = do
+  let h = ldapC ^.ldapConfigHost.from packed
+  let p = ldapC ^.ldapConfigPort.to fromIntegral
   ctx <- tryLdap $ L.ldapInit h p
-  let env = LdapEnv ctx c
+  let env = LdapEnv ctx ldapC
   doLdap env bindRootDn
   pure env
 
@@ -258,8 +260,8 @@ runLdap
   => ExceptT e (ReaderT LdapEnv IO) a
   -> m a
 runLdap m = do
-  c <- view ldapConfig
-  env <- connectLdap c
+  ldapC <- view ldapConfig
+  env <- connectLdap ldapC
   doLdap env m
 
 doLdap :: (MonadError a m, MonadIO m, Applicative m) => r -> ExceptT a (ReaderT r IO) b -> m b

@@ -86,10 +86,10 @@ dnFromTextCrayCray :: Assertion
 dnFromTextCrayCray = dnFromTextEither crayCrayDnText @?= (Right crayCrayDn)
 
 dnToTextCrayCray :: Assertion
-dnToTextCrayCray = dnToText crayCrayDn @?= "UID=benkolera\\+troll@gmail.com+CN=Ben Kolera\\ ,1337=foo,DC=benkolera,DC=com"
+dnToTextCrayCray = dnToText crayCrayDn @?= "UID=benkolera\\2btroll@gmail.com+CN=Ben Kolera\\20,1337=foo,DC=benkolera,DC=com"
 
 dnToTextEscapedPlus :: Assertion
-dnToTextEscapedPlus = dnToText dn @?= "UID=ben\\+broken@gmail.com,DC=benkolera,DC=com"
+dnToTextEscapedPlus = dnToText dn @?= "UID=ben\\2bbroken@gmail.com,DC=benkolera,DC=com"
   where
     dn = (Dn [rDnSingle $ uid "ben+broken@gmail.com",rDnSingle $ dc "benkolera",rDnSingle $ dc "com"])
 

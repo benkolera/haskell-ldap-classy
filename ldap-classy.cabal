@@ -2,7 +2,7 @@
 -- documentation, see http://haskell.org/cabal/users-guide/
 
 name:                ldap-classy
-version:             0.5.0.0
+version:             0.5.2.1
 synopsis:            An opinionated typeclassy layer on top of the LDAP library.
 -- description:
 homepage:            https://github.com/benkolera/haskell-ldap-classy
@@ -28,10 +28,12 @@ library
     , LDAP.Classy.SSha
     , LDAP.Classy.Types
     , LDAP.Classy.Dn
+    , LDAP.Classy.AttributeType
   other-modules:
       LDAP.Classy.Dn.Internal
     , LDAP.Classy.Dn.Types
     , LDAP.Classy.ParsingUtils
+    , LDAP.Classy.AttributeValue
   build-depends:
       base >=4.7 && <4.9
     , base-prelude
