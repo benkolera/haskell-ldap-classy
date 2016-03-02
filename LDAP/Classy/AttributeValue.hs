@@ -1,20 +1,23 @@
 {-# LANGUAGE OverloadedStrings #-}
 module LDAP.Classy.AttributeValue where
 
-import Control.Applicative ((<$>),(<|>),pure,(*>))
-import Control.Monad.Reader (ReaderT,runReaderT,lift,ask)
-import qualified Data.ByteString.Char8 as BS8
-import qualified Data.ByteString.Base16 as BS16
-import Data.Foldable (foldMap,toList)
-import Data.List (nub)
-import Control.Monad (mzero)
-import Data.Attoparsec.Text (Parser,eitherResult,feed,parse,option,space,endOfInput,many1,peekChar)
-import Data.Semigroup ((<>))
-import Data.Text (Text)
-import qualified Data.Text as T
-import qualified Data.Text.Encoding as T(decodeUtf8) 
+import           Control.Applicative      ((<|>))
+import           Control.Monad            (mzero)
+import           Control.Monad.Reader     (ReaderT, ask, lift, runReaderT)
+import           Data.Attoparsec.Text     (Parser, eitherResult, endOfInput,
+                                           feed, many1, option, parse, peekChar,
+                                           space)
+import qualified Data.ByteString.Base16   as BS16
+import qualified Data.ByteString.Char8    as BS8
+import           Data.Foldable            (toList)
+import           Data.List                (nub)
+import           Data.Semigroup           ((<>))
+import           Data.Text                (Text)
+import qualified Data.Text                as T
+import qualified Data.Text.Encoding       as T (decodeUtf8)
 
-import LDAP.Classy.ParsingUtils (invalidStrCharSet,notInClassP,inClassP)
+import           LDAP.Classy.ParsingUtils (inClassP, invalidStrCharSet,
+                                           notInClassP)
 
 data DnValuePart = DnValueText Text | DnValueSpecial Char deriving Show
 
@@ -72,7 +75,7 @@ innerValueStrChar :: ReaderT String Parser Char
 innerValueStrChar = lift innerSpace <|> (ask >>= lift . notInClassP)
 
 specialChar :: ReaderT String Parser Char
-specialChar = ask >>= lift . inClassP 
+specialChar = ask >>= lift . inClassP
 
 innerSpace :: Parser Char
 innerSpace = do

@@ -1,0 +1,15 @@
+flags: {}
+extra-package-dbs: []
+packages:
+- '.'
+- location:
+    git: https://github.com/tonymorris/utility-tm
+    commit: 22457f0454fc69137061dd47aae2fd66c3b83b65
+- location:
+    git: https://github.com/alephcloud/hs-hoist-error
+    commit: a87bfc962a55a8270c522ba06d98707a9914b998
+extra-deps:
+- LDAP-0.6.10
+- passwords-0.1.0.6
+- text-1.2.2.0
+resolver: lts-5.3

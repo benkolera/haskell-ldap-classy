@@ -3,24 +3,33 @@
 {-# LANGUAGE TupleSections     #-}
 module LDAP.Classy.Dn.Internal where
 
-import           BasePrelude            hiding ((<>))
+import           Prelude                    (read)
 
-import           Data.Attoparsec.Text   (Parser, char, endOfInput,
-                                         many1, manyTill,
-                                         notInClass, 
-                                         peekChar, satisfy, sepBy, sepBy1,
-                                         skipMany)
-import           Data.ByteString.Base16 as B16
-import qualified Data.List.NonEmpty     as NEL
-import           Data.Semigroup         (Semigroup (..))
-import           Data.Text              (Text)
-import qualified Data.Text              as T
-import qualified Data.Text.Encoding     as T
+import           Control.Applicative        (pure, (*>), (<$>), (<*), (<*>),
+                                             (<|>))
+import           Control.Category           ((.))
+import           Control.Monad              (mzero, return)
+import           Data.Attoparsec.Text       (Parser, char, endOfInput, many',
+                                             many1, manyTill, notInClass,
+                                             peekChar, satisfy, sepBy, sepBy1,
+                                             skipMany)
+import           Data.ByteString.Base16     as B16
+import           Data.Char                  (Char)
+import           Data.Foldable              (toList)
+import           Data.Function              (($))
+import           Data.Functor               (fmap)
+import qualified Data.List.NonEmpty         as NEL
+import           Data.Maybe                 (Maybe (..))
+import           Data.Semigroup             (Semigroup (..))
+import           Data.Text                  (Text)
+import qualified Data.Text                  as T
+import qualified Data.Text.Encoding         as T
+import           Data.Tuple                 (fst)
 
-import           LDAP.Classy.Dn.Types
 import           LDAP.Classy.AttributeType
 import           LDAP.Classy.AttributeValue
-import           LDAP.Classy.ParsingUtils    (invalidStrCharSet,inClassP)
+import           LDAP.Classy.Dn.Types
+import           LDAP.Classy.ParsingUtils   (inClassP, invalidStrCharSet)
 
 -- The logic for encoding / decoding the strings can be found here:
 -- https://tools.ietf.org/html/rfc4514
@@ -69,7 +78,7 @@ descr :: Parser AttributeType
 descr = do
   t <- T.cons
     <$> alpha
-    <*> (T.pack <$> many (alpha <|> digit <|> hyphen))
+    <*> (T.pack <$> many' (alpha <|> digit <|> hyphen))
   pure $ case T.toUpper t of
     "L"      -> LocalityName
     "CN"     -> CommonName
