@@ -1,7 +1,6 @@
 module LDAP.Classy.Dn.Types where
 
 import           Data.List.NonEmpty (NonEmpty)
-import           Data.Monoid        (Monoid (mappend, mempty))
 import           Data.Semigroup     (Semigroup ((<>)))
 import           Data.Text          (Text)
 

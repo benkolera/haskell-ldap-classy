@@ -1,7 +1,7 @@
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE NoImplicitPrelude #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE TupleSections #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE NoImplicitPrelude     #-}
+{-# LANGUAGE TemplateHaskell       #-}
+{-# LANGUAGE TupleSections         #-}
 module LDAP.Classy.Decode
   ( LdapEntryDecodeError(..)
   , FromLdapAttribute(..)
@@ -18,22 +18,35 @@ module LDAP.Classy.Decode
   , _AttributeFailedParse
   ) where
 
-import BasePrelude
+import           Prelude                   (Double, Int, Integer, Read, Show,
+                                            show, (==))
 
-import Control.Lens
-import Safe             (readMay,headMay)
-import Control.Monad.Except (MonadError)
-import Control.Monad.Error.Hoist ((<%?>),hoistError)
-import Control.Monad.Error.Lens (throwing)
-import Data.List.NonEmpty        (NonEmpty (..))
+import           Control.Applicative       (Applicative (..), pure)
+import           Control.Category          (id, (.))
+import           Control.Lens
+import           Control.Monad             ((=<<))
+import           Control.Monad.Error.Hoist (hoistError, (<%?>))
+import           Control.Monad.Error.Lens  (throwing)
+import           Control.Monad.Except      (MonadError)
+
+import           Safe                      (headMay, readMay)
+
+import           Data.Either               (Either (..))
+import           Data.Foldable             (find)
+import           Data.Function             (const, ($))
+import           Data.Functor              (Functor, fmap)
+import           Data.List.NonEmpty        (NonEmpty (..))
 import qualified Data.List.NonEmpty        as NEL
-import qualified Data.Text as T
-import qualified Data.Text.Lazy as TL
-import Data.Text.Lens (packed)
-import LDAP                      as L
+import           Data.Maybe                (Maybe (..), maybe)
+import           Data.String               (String)
+import qualified Data.Text                 as T
+import qualified Data.Text.Lazy            as TL
+import           Data.Text.Lens            (packed)
+import           Data.Tuple                (snd)
+import           LDAP                      as L
 
-import LDAP.Classy.Types
-import LDAP.Classy.Dn
+import           LDAP.Classy.Dn
+import           LDAP.Classy.Types
 
 data LdapEntryDecodeError
   = RequiredAttributeMissing LDAPEntry String
@@ -52,7 +65,7 @@ class FromLdapEntry a where
 
 class ToLdapEntry a where
   toLdapAttrs :: a -> [(String,[String])]
-  toLdapAttrs a = leattrs . toLdapEntry $ a
+  toLdapAttrs = leattrs . toLdapEntry
   toLdapDn :: a -> Dn
   toLdapDn = dnFromEntry . toLdapEntry
   toLdapEntry :: a -> LDAPEntry
@@ -163,7 +176,7 @@ instance ToLdapAttribute String where
   toLdapAttribute = id
 
 instance FromLdapEntry LDAPEntry where
-  fromLdapEntry = pure 
+  fromLdapEntry = pure
 
 instance ToLdapEntry LDAPEntry where
   toLdapEntry = id

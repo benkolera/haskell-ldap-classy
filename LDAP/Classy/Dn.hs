@@ -20,19 +20,31 @@ module LDAP.Classy.Dn
   , dnFromEntry
   ) where
 
-import           BasePrelude             hiding ((<>))
+import           Prelude                   (Show, error, show, (&&), (-), (/=),
+                                            (<), (==))
 
-import           Control.Lens            (Getter, Prism', prism', to)
-import           Data.Attoparsec.Text    (eitherResult, feed, parse)
-import           Data.List.NonEmpty      (NonEmpty ((:|)))
-import qualified Data.List.NonEmpty      as NEL
-import           Data.Semigroup          ((<>))
-import           Data.Text               (Text)
-import qualified Data.Text               as T
-import           LDAP                    (LDAPEntry (..))
+import           Control.Category          ((.))
+import           Control.Lens              (Getter, Prism', prism', to)
 
-import           LDAP.Classy.Dn.Internal
+import           Data.Attoparsec.Text      (eitherResult, feed, parse)
+import           Data.Bool                 (Bool (..))
+import           Data.Either               (Either, either)
+import           Data.Foldable             (length)
+import           Data.Function             (const, flip, ($))
+import           Data.Functor              (fmap)
+import           Data.List                 (drop)
+import           Data.List.NonEmpty        (NonEmpty ((:|)))
+import qualified Data.List.NonEmpty        as NEL
+import           Data.Maybe                (Maybe (..), fromMaybe)
+import           Data.Semigroup            ((<>))
+import           Data.String               (String)
+import           Data.Text                 (Text)
+import qualified Data.Text                 as T
+
+import           LDAP                      (LDAPEntry (..))
+
 import           LDAP.Classy.AttributeType (AttributeType)
+import           LDAP.Classy.Dn.Internal
 import           LDAP.Classy.Dn.Types
 
 dnCons :: RelativeDn -> Dn -> Dn

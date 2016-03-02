@@ -2,7 +2,7 @@
 -- documentation, see http://haskell.org/cabal/users-guide/
 
 name:                ldap-classy
-version:             0.5.2.1
+version:             0.6.0.0
 synopsis:            An opinionated typeclassy layer on top of the LDAP library.
 -- description:
 homepage:            https://github.com/benkolera/haskell-ldap-classy
@@ -35,26 +35,25 @@ library
     , LDAP.Classy.ParsingUtils
     , LDAP.Classy.AttributeValue
   build-depends:
-      base >=4.7 && <4.9
-    , base-prelude
+      base              >=4.8 && < 5
     , attoparsec        == 0.13.*
-    , base64-bytestring == 1.0.*
-    , bifunctors        == 4.2.*
+    , base64-bytestring == 1.*
+    , bifunctors        == 5.*
     , bytestring        == 0.10.*
     , base16-bytestring == 0.1.*
-    , exceptions        >= 0.6 && < 0.9
+    , exceptions        == 0.8.*
     , hoist-error       == 0.1.*
-    , lens              == 4.8.*
+    , lens              >= 4.13
     , LDAP              == 0.6.*
     , mtl               == 2.2.*
     , passwords         == 0.1.*
-    , random            == 1.1.*
+    , random            == 1.*
     , safe              == 0.3.*
-    , semigroups        == 0.16.*
+    , semigroups        == 0.18.*
     , SHA               == 1.6.*
     , text              == 1.2.*
     , transformers      == 0.4.*
-  ghc-options: -Wall 
+  ghc-options: -Wall
   default-language:    Haskell2010
 
 executable example
@@ -65,53 +64,58 @@ executable example
   else
     buildable: False
   build-depends:
-      base                  >=4.7 && <4.9
+      base                 >=4.8 && < 5
     , ldap-classy
-    , base-prelude
-    , bifunctors            == 4.2.*
-    , hoist-error           == 0.1.*
-    , lens                  == 4.8.*
-    , LDAP                  == 0.6.*
-    , mtl                   == 2.2.*
-    , optparse-applicative
-    , semigroups            == 0.16.*
-    , text                  == 1.2.*
-    , UtilityTM             == 0.0.*
+    , bifunctors           == 5.*
+    , hoist-error          == 0.1.*
+    , lens                 >= 4.13
+    , LDAP                 == 0.6.*
+    , mtl                  == 2.2.*
+    , optparse-applicative == 0.12.*
+    , semigroups           == 0.18.*
+    , text                 == 1.2.*
+    , UtilityTM            == 0.0.4
   default-language:    Haskell2010
 
 test-suite tasty
   default-language: Haskell2010
+  other-modules: LDAP.Classy.AttributeType
+                 LDAP.Classy.AttributeValue
+                 LDAP.Classy.Dn
+                 LDAP.Classy.Dn.Internal
+                 LDAP.Classy.Dn.Types
+                 LDAP.Classy.ParsingUtils
+                 Test.LDAP.Classy.Dn
   type: exitcode-stdio-1.0
   hs-source-dirs: tests, .
   main-is: Tasty.hs
   ghc-options: -Wall -Werror -fwarn-tabs
   build-depends:
       base              >= 4     && < 5
-    , tasty             >= 0.10
-    , tasty-hunit       >= 0.9.2
-    , base-prelude
-    , attoparsec        == 0.13.*
-    , base64-bytestring == 1.0.*
-    , bifunctors        == 4.2.*
-    , bytestring        == 0.10.*
-    , base16-bytestring == 0.1.*
-    , exceptions        >= 0.6 && < 0.9
-    , hlint             == 1.9.*
-    , hoist-error       == 0.1.*
-    , lens              == 4.8.*
-    , LDAP              == 0.6.*
-    , mtl               == 2.2.*
-    , passwords         == 0.1.*
-    , random            == 1.1.*
-    , safe              == 0.3.*
-    , semigroups        == 0.16.*
-    , SHA               == 1.6.*
-    , text              == 1.2.*
-    , transformers      == 0.4.*
+    , tasty
+    , tasty-hunit
+    , attoparsec
+    , base64-bytestring
+    , bifunctors
+    , bytestring
+    , base16-bytestring
+    , exceptions
+    , hlint
+    , hoist-error
+    , lens
+    , LDAP
+    , mtl
+    , passwords
+    , random
+    , safe
+    , semigroups
+    , SHA
+    , text
+    , transformers
 
--- Won't work until ghc 7.10
--- test-suite doctests
---   type:          exitcode-stdio-1.0
---   ghc-options:   -threaded
---   main-is:       tests/Doctests.hs
---  build-depends: base, doctest >= 0.8
+test-suite doctests
+  default-language: Haskell2010
+  type:          exitcode-stdio-1.0
+  ghc-options:   -threaded
+  main-is:       tests/Doctests.hs
+ build-depends: base, doctest >= 0.8

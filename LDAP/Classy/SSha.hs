@@ -6,15 +6,25 @@
 {-# LANGUAGE TypeFamilies          #-}
 module LDAP.Classy.SSha where
 
-import BasePrelude
+import           Prelude                     (Eq, Int, Show,show,(==))
 
-import Control.Lens
-import Data.ByteString.Base64.Lazy (encode)
-import Data.ByteString.Lazy        (ByteString, pack)
-import Data.Digest.Pure.SHA        (bytestringDigest, sha1)
-import Data.Text.Lazy              (Text, unpack)
-import Data.Text.Lazy.Encoding     (decodeUtf8, encodeUtf8)
-import System.Random               (getStdRandom, random)
+import           Control.Applicative         ((<$>))
+import           Control.Category            ((.))
+import           Control.Lens
+import           Control.Monad               (replicateM)
+
+import           Data.Bool                   (Bool (..))
+import           Data.ByteString.Base64.Lazy (encode)
+import           Data.ByteString.Lazy        (ByteString, pack)
+import           Data.Digest.Pure.SHA        (bytestringDigest, sha1)
+import           Data.Function               (flip, ($))
+import           Data.Functor                (fmap)
+import           Data.Monoid                 ((<>))
+import           Data.Text.Lazy              (Text, unpack)
+import           Data.Text.Lazy.Encoding     (decodeUtf8, encodeUtf8)
+
+import           System.IO                   (IO)
+import           System.Random               (getStdRandom, random)
 
 newtype Salt = Salt ByteString deriving Eq
 makeWrapped ''Salt

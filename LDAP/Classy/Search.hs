@@ -19,19 +19,29 @@ module LDAP.Classy.Search
   , isPosixGroup
   ) where
 
-import BasePrelude        hiding (first, try, (<>))
-import Data.Text          (pack,unpack)
-import Data.List.NonEmpty (NonEmpty (..), (<|))
-import Data.Semigroup     ((<>))
+import           Control.Applicative        (pure)
+import           Control.Category           ((.))
+import           Prelude                    (Show, (==))
 
-import LDAP.Classy.AttributeValue (escapeAttrValueTextExtraEscape)
+import           Data.Bool                  (Bool (..))
+import           Data.Foldable              (foldMap)
+import           Data.Function              (($))
+import           Data.Functor               (fmap)
+import           Data.List                  (drop, isPrefixOf, isSuffixOf,
+                                             reverse)
+import           Data.List.NonEmpty         (NonEmpty (..), (<|))
+import           Data.Semigroup             ((<>))
+import           Data.String                (IsString (..), String)
+import           Data.Text                  (pack, unpack)
+
+import           LDAP.Classy.AttributeValue (escapeAttrValueTextExtraEscape)
 
 -- It's worthwhile checking out these RFCs:
 -- - https://tools.ietf.org/html/rfc4512
 -- - https://tools.ietf.org/html/rfc4515
 
 -- Lots of things aren't implemented here, sadly:
--- TODO: Putting a search in the middle of a string (cn ==. "Ben*Kolera") currently escapes to cn=Ben\*Kolera. 
+-- TODO: Putting a search in the middle of a string (cn ==. "Ben*Kolera") currently escapes to cn=Ben\*Kolera.
 -- TODO: Any kind of safety around the keys. You can break things by going "cn=" ==. "foo".
 -- TODO: Extensible Matches
 -- TODO: Substring searches
@@ -187,7 +197,7 @@ infixl 2 ||.
 -- >>> "a" <-. (ExactMatch "a") :| [ExactMatch "b",Unanchored "c"]
 -- LdapOr (LdapMatch "a" (ExactMatch "a") :| [LdapMatch "a" (ExactMatch "b"),LdapMatch "a" (Unanchored "c")])
 in_,(<-.) :: String -> NonEmpty MatchExpr -> LdapSearch
-in_ k ss = LdapOr . fmap (LdapMatch k) $ ss
+in_ k = LdapOr . fmap (LdapMatch k)
 
 (<-.) = in_
 
