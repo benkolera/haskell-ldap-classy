@@ -4,7 +4,7 @@ module Test.LDAP.Classy.Dn (dnTests) where
 import           Test.Tasty              (TestTree, testGroup)
 import           Test.Tasty.HUnit        (Assertion, testCase, (@?=))
 
-import           Control.Applicative     ((*>), (<*), (<|>))
+import           Control.Applicative     ((<|>))
 import           Data.Attoparsec.Text    (Parser, eitherResult, endOfInput,
                                           feed, option, parse)
 import           Data.Foldable           (traverse_)

@@ -42,9 +42,12 @@ module LDAP.Classy
   , module AttrTypes
   ) where
 
-import           BasePrelude               hiding (delete, first, insert, try)
+import           Prelude                   (Int, Show, fromIntegral, show)
 
+import           Control.Applicative       (Applicative, pure, (<$>))
+import           Control.Category          ((.))
 import           Control.Lens
+import           Control.Monad             ((>>), (>>=))
 import           Control.Monad.Catch       (try)
 import           Control.Monad.Error.Hoist ((<%!?>))
 import           Control.Monad.Error.Lens  (catching, throwing)
@@ -54,9 +57,18 @@ import           Control.Monad.IO.Class    (MonadIO, liftIO)
 import           Control.Monad.Reader      (MonadReader, ReaderT, runReaderT)
 import           Crypto.Password           (CharType (..), PasswordFeature (..),
                                             generatePassword)
+
+import           Data.Bool                 (Bool (..), not)
+import           Data.Either               (Either, either)
+import           Data.Foldable             (traverse_)
+import           Data.Function             (($))
+import           Data.Functor              (fmap)
+import           Data.List                 (filter, null)
+import           Data.Maybe                (Maybe (..))
 import           Data.Text                 (Text, pack)
 import           Data.Text.Lazy            (fromStrict)
 import           Data.Text.Lens
+import           Data.Tuple                (snd)
 import           LDAP                      (LDAP, LDAPEntry (..),
                                             LDAPException (..), LDAPMod (..),
                                             LDAPModOp (..), LDAPScope (..),
@@ -74,6 +86,7 @@ import           LDAP.Classy.Search        (LdapSearch, ldapSearchStr)
 import           LDAP.Classy.SSha          (toSSha)
 import           LDAP.Classy.Types         as Types
 import           Safe                      (headMay)
+import           System.IO                 (IO)
 
 data LdapCredentials = LdapCredentials
   { _ldapCredentialsDn       :: Dn

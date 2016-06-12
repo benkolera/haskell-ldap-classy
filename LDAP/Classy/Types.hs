@@ -6,10 +6,10 @@
 {-# LANGUAGE TypeFamilies               #-}
 module LDAP.Classy.Types where
 
-import BasePrelude
-
-import Control.Lens
-import Data.Text    (Text)
+import           Control.Lens
+import           Data.String  (IsString)
+import           Data.Text    (Text)
+import           Prelude      (Eq, Int, Num, Show)
 
 newtype Uid = Uid Text deriving (Show,IsString,Eq)
 makeWrapped ''Uid
